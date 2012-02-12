@@ -7,7 +7,6 @@
 /* @reason
 @end*/
 // ==/UserScript==
-var startTime = new Date();
 
 typeof Updater != 'undefined' && new Updater({
     name: "MonkeyBean",
@@ -15,7 +14,11 @@ typeof Updater != 'undefined' && new Updater({
     version:"0.22"
 }).check();
 
+
 (function(window) {
+    if(window !== window.top) return false;  //防止在iframe中执行
+
+    var startTime = new Date();
 
     /*-------------------Begin--------------------*/
     var cName = 'monkey.username',
@@ -43,12 +46,17 @@ typeof Updater != 'undefined' && new Updater({
         }
     };
 
+    //猴骨~MVC~模仿backbone
+    var monkeyBone = {
+
+    };
+
     var publisher = {
         subscribers : {
             any : []
         },
 
-        on : function(type, fn, context) {
+        bind : function(type, fn, context) {
             type = type || 'any';
             fn = $.isFunction(fn) ? fn : context[fn];
 
@@ -61,12 +69,12 @@ typeof Updater != 'undefined' && new Updater({
             })
         },
 
-        remove : function(type, fn, context) {
-            this.visitSubscribers('unsubscribe', type, fn, context);
+        unbind : function(type, fn, context) {
+            this.visitSubscribers('unbind', type, fn, context);
         },
 
-        fire : function(type, publication) {
-            this.visitSubscribers('publish', type, publication);
+        trigger : function(type, publication) {
+            this.visitSubscribers('trigger', type, publication);
         },
 
         visitSubscribers : function(action, type, arg, context) {
@@ -76,7 +84,7 @@ typeof Updater != 'undefined' && new Updater({
                 max = subscribers ? subscribers.length : 0;
 
             for(; i < max; i += 1) {
-                if(action === 'publish') {
+                if(action === 'trigger') {
                     subscribers[i].fn.call(subscribers[i].context, arg);
                 } else {
                     if(subscribers[i].fn === arg && subscribers[i].context === context) {
@@ -97,15 +105,6 @@ typeof Updater != 'undefined' && new Updater({
                     handler.call(e.target, e);
                 }
             })
-        },
-
-        extend : function(o, s) {
-            for(var key in s) {
-                if(hasOwnProp.call(s, key)) {
-                    o[key] = s[key];
-                }
-            }
-            return o;
         },
 
         cookie : {
@@ -203,7 +202,6 @@ typeof Updater != 'undefined' && new Updater({
     var xml = monkeyToolBox.xml,
         cookie = monkeyToolBox.cookie,
         css = monkeyToolBox.css,
-        extend = monkeyToolBox.extend,
         query = monkeyToolBox.locationQuery,
         delegate = monkeyToolBox.delegate,
         show = monkeyToolBox.show,
@@ -386,7 +384,7 @@ log('test debug Mode');
     var nuts = {
         //是否登录
         isLogin : function() {
-            return (typeof nuts.login !== 'undefined' && nuts.login) || (nuts.login = !!cookie.get('ck'));
+            return (typeof this.login !== 'undefined' && this.login) || (this.login = !!cookie.get('ck'));
         },
 
         query : function(selector, context) {
@@ -569,18 +567,22 @@ log('test debug Mode');
         }
     })();
 
-    var monkeyModule = function(name, method) {
+    var MonkeyModule = function(name, method) {
+        if(this.constructor != MonkeyModule) {
+            return new MonkeyModule(name, method);
+        }
         var that = this;
         this.guid = guid++;
         this.name = name;
         this.filter = new RegExp('');
-        extend(this, method);
+        $.extend(this, method);
         this.on = false;  //是否启动
         that.init();
     };
 
-    monkeyModule.prototype = {
-        constructor : monkeyModule,
+    MonkeyModule.prototype = {
+        constructor : MonkeyModule,
+
         init : function() {
             monkeyModuleManager.register(this);
         },
@@ -594,13 +596,15 @@ log('test debug Mode');
         }
     };
 
+    $.extend(MonkeyModule.prototype, publisher);
+
 
     //猴子天气
     /**
      * 使用Google API，地址 http://www.google.com/ig/api?weather=Beijing&hl=zh-cn
      */
     var monkeyWeather = new monkeyModule('weather', {
-        filter : /www.douban.com\/[mine|people\/*\/]/,
+        filter : /www.douban.com\/(mine|(people\/.+\/)$)/,
         url : 'http://www.google.com/ig/api?weather={1}&hl=zh-cn',
         load : function() {
             //log(this.name + ' 准备加载！');
@@ -944,6 +948,6 @@ log('test debug Mode');
     });
 
     nuts.load();
-})(window)
 
-log(((new Date()) - startTime)/1000 + '秒');
+    log(((new Date()) - startTime)/1000 + '秒');
+})(window)
