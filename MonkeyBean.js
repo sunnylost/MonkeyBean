@@ -15,7 +15,7 @@ typeof Updater != 'undefined' && new Updater({
     version:"0.22"
 }).check();
 
-(function(window, $) {
+(function(window) {
 
     /*-------------------Begin--------------------*/
     var cName = 'monkey.username',
@@ -33,7 +33,14 @@ typeof Updater != 'undefined' && new Updater({
     var monkeyBean = {
         author : 'sunnylost',
         updateTime : '20120212',
-        password : 'Ooo! Ooo! Aaa! Aaa! :(|)'
+        password : 'Ooo! Ooo! Aaa! Aaa! :(|)',
+
+        //开启debug模式
+        debugMode : true,
+
+        log : function(msg) {
+            monkeyBean.debugMode && typeof console !== 'undefined' && console.log(msg);
+        }
     };
 
     var publisher = {
@@ -203,15 +210,16 @@ typeof Updater != 'undefined' && new Updater({
         hide = monkeyToolBox.hide,
         toggle = monkeyToolBox.toggle,
         trim = monkeyToolBox.trim,
-        position = monkeyToolBox.position;
+        position = monkeyToolBox.position,
+        log = monkeyBean.log;
 
 
     var userName = GM_getValue(cName) || '',
         userLocation = GM_getValue(cLocation) || '',
         guid = 0;
-
-//console.log(userName);
-//console.log(userLocation);
+log('test debug Mode');
+//log(userName);
+//log(userLocation);
 
 //GM_deleteValue(cName);
 
@@ -578,7 +586,7 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         load : function() {
-            //console.log(this.name + ' 准备加载！');
+            //log(this.name + ' 准备加载！');
         },
 
         toString : function() {
@@ -595,7 +603,7 @@ typeof Updater != 'undefined' && new Updater({
         filter : /www.douban.com\/[mine|people\/*\/]/,
         url : 'http://www.google.com/ig/api?weather={1}&hl=zh-cn',
         load : function() {
-            //console.log(this.name + ' 准备加载！');
+            //log(this.name + ' 准备加载！');
             var place = nuts.query('.user-info > a'),
                 a;
             if(!place || !trim(place.textContent)) return;
@@ -629,7 +637,7 @@ typeof Updater != 'undefined' && new Updater({
     var monkeyNav = new monkeyModule('nav', {
         css : '#_monkey_secondNav{display:block;width:600px;} #_monkey_secondNav ul{position:relative;z-index:5;} #_monkey_secondNav ul li{float:none;}',
         load : function() {
-            //console.log(this.name + ' 准备加载！');
+            //log(this.name + ' 准备加载！');
 
             //在未登录的状态下，首页不显示导航栏
             if(window.location.href == monkeyMirror.doubanMainPage && !nuts.isLogin()) return false;
@@ -681,11 +689,11 @@ typeof Updater != 'undefined' && new Updater({
     var monkeyCommentToolbox = {
         //快捷回复
         reply : function(data, el) {
-            console.log('reply=' + data);
+            log('reply=' + data);
         },
         //引用用户发言
         quote : function(data) {
-            console.log('quote');
+            log('quote');
         },
         //只看该用户发言
         only : function(data) {
@@ -705,7 +713,7 @@ typeof Updater != 'undefined' && new Updater({
                 i = 0;
             //这里的this是monkeyComment.toolRel，但是不影响操作~
             this.clicked = !this.clicked;
-            console.log(len);
+            log(len);
             if(len > 0) {
                 if(this.clicked) {
                     while(len--) {
@@ -766,7 +774,7 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         load : function() {
-            //console.log(this.name + ' 准备加载！');
+            //log(this.name + ' 准备加载！');
 
             GM_addStyle(this.css);
 
@@ -812,7 +820,7 @@ typeof Updater != 'undefined' && new Updater({
                     for(; i<10; i++) {
                         userId = nuts.query('a', items[i]).textContent;
                         fragment.innerHTML = monkeyMirror.commentToolbar.replace('{1}', userId);
-                        //console.log(fragment.innerHTML);
+                        //log(fragment.innerHTML);
                         items[i].setAttribute('monkey_data', userId);
                         items[i].innerHTML += '<span class="_monkey_floor">' + (start + i + 1) + '楼</span>';
                         breaks[i].parentNode.insertBefore(fragment, breaks[i]);
@@ -936,6 +944,6 @@ typeof Updater != 'undefined' && new Updater({
     });
 
     nuts.load();
-})(window, jQuery)
+})(window)
 
-console.log(((new Date()) - startTime)/1000 + '秒');
+log(((new Date()) - startTime)/1000 + '秒');
