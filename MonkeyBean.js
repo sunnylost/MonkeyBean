@@ -49,7 +49,7 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         get : function(key, defaultVal) {
-            GM_getValue(key, defaultVal);
+            return GM_getValue(key, defaultVal);
         },
 
         set : function(key, value) {
@@ -203,7 +203,6 @@ typeof Updater != 'undefined' && new Updater({
             delegate = monkeyToolBox.delegate,
             show = monkeyToolBox.show,
             hide = monkeyToolBox.hide,
-            toggle = monkeyToolBox.toggle,
             trim = monkeyToolBox.trim,
             position = monkeyToolBox.position,
             log = MonkeyBean.log;
@@ -458,7 +457,7 @@ typeof Updater != 'undefined' && new Updater({
 //log(userLocation);
 
 //GM_deleteValue(cName);
-
+    log('username=' + userName);
     //获得用户ID与地址
     (function () {
         if (!userName) {
@@ -471,7 +470,8 @@ typeof Updater != 'undefined' && new Updater({
                     //响应头部信息中，包含了最终的url，其中就有用户名
                     var arr = resp.finalUrl.split('/');
                     userName = arr[arr.length - 2];
-                    GM_setValue(cName, userName);
+                    MonkeyBean.set(cName, userName);
+                    log('2222' + cName + '=' + MonkeyBean.get(cName, ''));
                 }
             })
         }
@@ -485,7 +485,7 @@ typeof Updater != 'undefined' && new Updater({
                     //响应头部信息中，包含了最终的url，其中就有地址
                     var arr = trim(resp.finalUrl).split('.');
                     userLocation = arr[0].slice(7);
-                    GM_setValue(cLocation, userLocation);
+                    MonkeyBean.set(cLocation, userLocation);
                 }
             })
         }
@@ -686,64 +686,7 @@ typeof Updater != 'undefined' && new Updater({
                 return peal.box = box;
             }
         }
-        /**
-         * 绿色 ：#226622
-         *
-         * 豆瓣提示
-         * TIP ：<div class="tips-overly guide" style="">
-         <div class="tips-hd">提示：</div>
-         <div class="tips-bd">
-         <h2>友邻广播有了新入囗</h2>
-         <p>我们为广播增加了很多新功能，方便你和友邻互动交流、分享好东西。</p>
-         <a class="lnk-bn lnk-close" href="#TIPS_ID">知道了</a>
-         </div>
-         </div>
 
-         .widget-photo-list .info {
-         background: none repeat scroll 0 0 #FFFFFF;
-         border: 1px solid #999999;
-         height: 36px;
-         padding: 5px;
-         position: absolute;
-         z-index: 3;
-         }
-
-         .widget-photo-list .info {
-         background: none repeat scroll 0 0 #FFFFFF;
-         border: 1px solid #999999;
-         height: 36px;
-         padding: 5px;
-         position: absolute;
-         z-index: 3;
-
-         .widget-photo-list .info
-
-         .widget-photo-list .info ._monkey_arrow_outer {
-         border-top: 6px solid #666666;
-         z-index: 4;
-         }
-
-         <div class="info desc" style="">
-         <p>还是银他妈ED，尺寸10x1...</p>
-         <a class="pic" href="http://www.douban.com/people/31896137/"><img title="酱油油" src="http://img3.douban.com/icon/u31896137-4.jpg"></a>
-         <span class="arrow inner"></span>
-         <span class="arrow outer"></span>
-         </div>
-
-         新浪微博
-         颜色 #feffe5
-         <div id="pl_content_versionTip">
-         <div style="left: 565.5px; top: 28px; z-index: 10000; position: fixed; visibility: visible;" class="W_layer layer_tips layer_tips_version layer_tips_intro" node-type="items" messagetip="20">
-         <div class="layer_tips_bg">
-         <a title="" action-data="bubbletype=20&amp;time=604800" action-type="iKnow" href=":;" class="W_close_color"></a>
-         <dl>
-         <dd>评论列表中可以查看回复记录啦！</dd>
-         </dl>
-         <span class="arrow_up" node-type="arrow" style="left: 106px;"></span>
-         </div>
-         </div>
-         </div>
-         */
     };
 
     //页面参数，用于缓存
@@ -833,45 +776,6 @@ typeof Updater != 'undefined' && new Updater({
             return 'This module\'s name is:' + this.name;
         }
     };
-
-
-    //猴子天气
-    /**
-     * 使用Google API，地址 http://www.google.com/ig/api?weather=Beijing&hl=zh-cn
-     */
-    /*var monkeyWeather = new MonkeyModule('weather', {
-     filter : /www.douban.com\/(mine|(people\/.+\/)$)/,
-     url : 'http://www.google.com/ig/api?weather={1}&hl=zh-cn',
-     load : function() {
-     //log(this.name + ' 准备加载！');
-     var place = nuts.query('.user-info > a'),
-     a;
-     if(!place || !trim(place.textContent)) return;
-     a = place.href.split('/');
-     place = place.textContent;
-
-     GM_xmlhttpRequest({
-     method : 'GET',
-     url : monkeyWeather.url.replace('{1}', a[a.length-2]),
-     onload : function(resp) {
-     xml.parse(resp.responseText);
-     var current = xml.tag('current_conditions'),
-     condition = xml.tag('condition', current).data,
-     icon = xml.tag('icon', current).data,
-     temp = xml.tag('temp_c', current).data,
-     profile = document.getElementById('profile'),
-     container = div.cloneNode(true);
-
-     container.style.cssText = 'position:relative;top:10px;';
-     container.innerHTML = monkeyMirror.weather.replace(/\{1\}/g, condition)
-     .replace('{2}', icon)
-     .replace('{3}', place)
-     .replace('{4}', temp);
-     profile.parentNode.insertBefore(container, profile)
-     }
-     })
-     }
-     });*/
 
     //猴子导航栏——用于显示顶部导航栏的二级菜单
     var monkeyNav = new MonkeyModule('nav', {
