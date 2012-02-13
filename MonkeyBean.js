@@ -5,7 +5,7 @@
 // @include        http://*.douban.com/*
 // @require http://userscript-autoupdate-helper.googlecode.com/svn/trunk/autoupdatehelper.js
 /* @reason
-@end*/
+ @end*/
 // ==/UserScript==
 
 typeof Updater != 'undefined' && new Updater({
@@ -15,7 +15,7 @@ typeof Updater != 'undefined' && new Updater({
 }).check();
 
 
-(function(window) {
+(function(window, $) {
     if(window !== window.top) return false;  //防止在iframe中执行
 
     var startTime = new Date();
@@ -25,197 +25,435 @@ typeof Updater != 'undefined' && new Updater({
         cLocation = 'monkey.location',
         cHighLightColor = '#46A36A',  //高亮用户发言的颜色
         cBlankStr = '',                 //空白字符串
+        ctor = function(){},
 
         div = document.createElement('div'),
+
+        hasOwn = Object.prototype.hasOwnProperty,
 
         mine = /\/mine/,
         people = /\/people\/*\//;
 
-    var hasOwnProp = Object.prototype.hasOwnProperty;
-
-    var monkeyBean = {
+    var MonkeyBean = {
         author : 'sunnylost',
-        updateTime : '20120212',
+        updateTime : '20120213',
         password : 'Ooo! Ooo! Aaa! Aaa! :(|)',
+
+        path : location.hostname + location.pathname,
 
         //开启debug模式
         debugMode : true,
 
         log : function(msg) {
-            monkeyBean.debugMode && typeof console !== 'undefined' && console.log(msg);
-        }
-    };
-
-    //猴骨~MVC~模仿backbone
-    var monkeyBone = {
-
-    };
-
-    var publisher = {
-        subscribers : {
-            any : []
+            MonkeyBean.debugMode && typeof console !== 'undefined' && console.log(msg);
         },
 
-        bind : function(type, fn, context) {
-            type = type || 'any';
-            fn = $.isFunction(fn) ? fn : context[fn];
-
-            if(typeof this.subscribers[type] === 'undefined') {
-                this.subscribers[type] = [];
-            }
-            this.subscribers[type].push({
-                fn : fn,
-                context : context || this
-            })
+        get : function(key, defaultVal) {
+            GM_getValue(key, defaultVal);
         },
 
-        unbind : function(type, fn, context) {
-            this.visitSubscribers('unbind', type, fn, context);
+        set : function(key, value) {
+            GM_setValue(key, value);
         },
 
-        trigger : function(type, publication) {
-            this.visitSubscribers('trigger', type, publication);
+        del : function(key) {
+            GM_deletetValue(key);
         },
 
-        visitSubscribers : function(action, type, arg, context) {
-            var pubtype = type || 'any',
-                subscribers = this.subscribers[pubtype],
-                i = 0,
-                max = subscribers ? subscribers.length : 0;
+        //是否登录
+        isLogin : function() {
+            return (typeof this.login !== 'undefined' && this.login) || (this.login = !!cookie.get('ck'));
+        },
 
-            for(; i < max; i += 1) {
-                if(action === 'trigger') {
-                    subscribers[i].fn.call(subscribers[i].context, arg);
-                } else {
-                    if(subscribers[i].fn === arg && subscribers[i].context === context) {
-                        subscribers.splice(i, 1);
+        MonkeyModuleManager : (function() {
+            var moduleTree = {},  //模块树，所有模块都生长在树上。
+                turnOn,
+                register;
+
+            register = function(moduleName, module) {
+                moduleTree[moduleName] = module;
+            };
+
+            turnOn = function() {
+                var m;
+                log(moduleTree);
+                for(m in moduleTree) {
+                    log('------' + moduleTree[m].filter.test(MonkeyBean.path));
+                    if(hasOwn.call(moduleTree, m)) {
+                        //MonkeyBean.get('MonkeyBean.' + m, false) 配置
+                        moduleTree[m].filter.test(MonkeyBean.path) && moduleTree[m].load();
                     }
                 }
-            }
-        }
-    };
+            };
 
-
-//-------------------------猴子工具箱----------------------------------
-    var monkeyToolBox = {
-        //事件代理
-        delegate : function(parentel, child, eventtype, handler) {
-            parentel.addEventListener(eventtype, function(e) {
-                if(e.target.tagName.toLowerCase() == child.toLowerCase()) {
-                    handler.call(e.target, e);
-                }
-            })
-        },
-
-        cookie : {
-            get : function(name) {
-                if(document.cookie.length > 0) {
-                    var start = document.cookie.indexOf(trim(name) + '='),
-                        end;
-                    if(start != -1) {
-                        start = start + name.length + 1;
-                        end = document.cookie.indexOf(';', start);
-                        if(end == -1) end = document.cookie.length;
-                        return decodeURI(document.cookie.substring(start, end));
-                    }
-                }
-                return '';
-            }
-        },
-
-        css : function(el, attribute, value) {
-            if(typeof value != 'undefined') {
-                el.style[attribute] = value;
-            }
-            return el.style[attribute];
-        },
-
-        //地址查询字符串搜索
-        locationQuery : function() {
-            if(location.search.length < 0) return {};
-
-            var queryarr = location.search.substring(1).split('&'),
-                len = queryarr.length,
-                item,
-                result = {};
-            while(len) {
-                item = queryarr[--len].split('=');
-                result[decodeURIComponent(item[0])] = decodeURIComponent(item[1]);
-            }
-            return result;
-        },
-
-        xml : {
-            parse : function(text) {
-                var xmlparse = new DOMParser();
-                this.xmldom = xmlparse.parseFromString(text, 'text/xml');
-                return this;
-            },
-
-            tag : function(name, el) {
-                el = el || this.xmldom;
-                this.el = el.getElementsByTagName(name)[0];
-                this.el && (this.el.data = this.attr('data'));
-                return this.el;
-            },
-
-            attr : function(name) {
-                return this.el.getAttribute(name);
-            },
-
-            tostring : function() {
-                return this.el || {};
-            }
-        },
-
-        toggle : function(el, value) {
-            if(!el) return;
-            if(el.style.display != 'none') {
-                monkeytoolbox.hide(el);
-            } else {
-                monkeytoolbox.show(el, value);
-            }
-        },
-
-        show : function(el, value) {
-            el && (el.style.display = value || 'block');
-        },
-
-        hide : function(el) {
-            el && (el.style.display = 'none');
-        },
-
-        trim : function(s) {
-            return (s + '').trim();
-        },
-
-        position : function(el) {
-            var rect = el.getBoundingClientRect();
             return {
-                'left' : rect.left + window.scrollX,
-                'top' : rect.top + window.scrollY
+                register : register,
+                turnOn : turnOn
             }
+        })()
+    };
+
+    //-------------------------猴子工具箱----------------------------------
+        var monkeyToolBox = {
+            //事件代理
+            delegate : function(parentel, child, eventtype, handler) {
+                parentel.addEventListener(eventtype, function(e) {
+                    if(e.target.tagName.toLowerCase() == child.toLowerCase()) {
+                        handler.call(e.target, e);
+                    }
+                })
+            },
+
+            cookie : {
+                get : function(name) {
+                    if(document.cookie.length > 0) {
+                        var start = document.cookie.indexOf(trim(name) + '='),
+                            end;
+                        if(start != -1) {
+                            start = start + name.length + 1;
+                            end = document.cookie.indexOf(';', start);
+                            if(end == -1) end = document.cookie.length;
+                            return decodeURI(document.cookie.substring(start, end));
+                        }
+                    }
+                    return '';
+                }
+            },
+
+            css : function(el, attribute, value) {
+                if(typeof value != 'undefined') {
+                    el.style[attribute] = value;
+                }
+                return el.style[attribute];
+            },
+
+            //地址查询字符串搜索
+            locationQuery : function() {
+                if(location.search.length < 0) return {};
+
+                var queryarr = location.search.substring(1).split('&'),
+                    len = queryarr.length,
+                    item,
+                    result = {};
+                while(len) {
+                    item = queryarr[--len].split('=');
+                    result[decodeURIComponent(item[0])] = decodeURIComponent(item[1]);
+                }
+                return result;
+            },
+
+            xml : {
+                parse : function(text) {
+                    var xmlparse = new DOMParser();
+                    this.xmldom = xmlparse.parseFromString(text, 'text/xml');
+                    return this;
+                },
+
+                tag : function(name, el) {
+                    el = el || this.xmldom;
+                    this.el = el.getElementsByTagName(name)[0];
+                    this.el && (this.el.data = this.attr('data'));
+                    return this.el;
+                },
+
+                attr : function(name) {
+                    return this.el.getAttribute(name);
+                },
+
+                tostring : function() {
+                    return this.el || {};
+                }
+            },
+
+            toggle : function(el, value) {
+                if(!el) return;
+                if(el.style.display != 'none') {
+                    monkeytoolbox.hide(el);
+                } else {
+                    monkeytoolbox.show(el, value);
+                }
+            },
+
+            show : function(el, value) {
+                el && (el.style.display = value || 'block');
+            },
+
+            hide : function(el) {
+                el && (el.style.display = 'none');
+            },
+
+            trim : function(s) {
+                return (s + '').trim();
+            },
+
+            position : function(el) {
+                var rect = el.getBoundingClientRect();
+                return {
+                    'left' : rect.left + window.scrollX,
+                    'top' : rect.top + window.scrollY
+                }
+            }
+        };
+
+    //shortcuts
+        var xml = monkeyToolBox.xml,
+            cookie = monkeyToolBox.cookie,
+            css = monkeyToolBox.css,
+            query = monkeyToolBox.locationQuery,
+            delegate = monkeyToolBox.delegate,
+            show = monkeyToolBox.show,
+            hide = monkeyToolBox.hide,
+            toggle = monkeyToolBox.toggle,
+            trim = monkeyToolBox.trim,
+            position = monkeyToolBox.position,
+            log = MonkeyBean.log;
+
+    //猴骨~MVC~模仿backbone,http://documentcloud.github.com/backbone/
+    var MonkeyBone = {
+        Event : {
+            subscribers : {
+            },
+
+            bind : function(type, fn, context) {
+                type = type || 'any';
+                fn = $.isFunction(fn) ? fn : context[fn];
+
+                if(typeof this.subscribers[type] === 'undefined') {
+                    this.subscribers[type] = [];
+                }
+                this.subscribers[type].push({
+                    fn : fn,
+                    context : context || this
+                })
+            },
+
+            unbind : function(type, fn, context) {
+                this.visitSubscribers('unbind', type, fn, context);
+            },
+
+            trigger : function(type, publication) {
+                this.visitSubscribers('trigger', type, publication);
+            },
+
+            visitSubscribers : function(action, type, arg, context) {
+                var pubtype = type || 'any',
+                    subscribers = this.subscribers[pubtype],
+                    i = 0,
+                    max = subscribers ? subscribers.length : 0;
+
+                for(; i < max; i += 1) {
+                    if(action === 'trigger') {
+                        subscribers[i].fn.call(subscribers[i].context, arg);
+                    } else {
+                        if(subscribers[i].fn === arg && subscribers[i].context === context) {
+                            subscribers.splice(i, 1);
+                        }
+                    }
+                }
+            }
+        },
+
+        Model : function(attributes, options) {
+            var defaults = this.defaults;
+            attributes || (attributes = {});
+            if(defaults) {
+                attributes = $.extend({}, defaults, attributes);
+            }
+            log('before');
+            log(attributes);
+
+            this.attributes = attributes;
+            this.set(attributes);
+            log('Model initialize');
+            log(this);
+            this.initialize.apply(this, arguments);
+        },
+
+        View : function(options) {
+            log(options);
+            this.initialize.apply(this, arguments);
         }
     };
 
-//shortcuts
-    var xml = monkeyToolBox.xml,
-        cookie = monkeyToolBox.cookie,
-        css = monkeyToolBox.css,
-        query = monkeyToolBox.locationQuery,
-        delegate = monkeyToolBox.delegate,
-        show = monkeyToolBox.show,
-        hide = monkeyToolBox.hide,
-        toggle = monkeyToolBox.toggle,
-        trim = monkeyToolBox.trim,
-        position = monkeyToolBox.position,
-        log = monkeyBean.log;
+    $.extend(MonkeyBone.Model.prototype, MonkeyBone.Event, {
+        initialize : function() {
+            return this;
+        },
+        // get Attribute from attributes
+        get : function(attr) {
+            return this.attributes[attr] || {};
+        },
+
+        set : function(key, value) {
+            var attrs, attr, val;
+            if($.isPlainObject(key) || key == null) {
+                attrs = key;
+            } else {
+                attrs = {};
+                attrs[key] = value;
+            }
+            for(attr in attrs) {
+                this.attributes[attr] = attrs[attr]
+            }
+            var alreadySetting = this._setting;
+            this._setting = true;
+            log('isChanged ? ' + alreadySetting);
+            if(alreadySetting) {
+                this.trigger('change');
+                this._setting = false;
+            }
+            return this;
+        }
+    });
+
+    $.extend(MonkeyBone.View.prototype, MonkeyBone.Event, {
+        render : function() {},
+        initialize : function() {
+            return this;
+        }
+    });
+
+    // this method is from Backbone.js
+    var inherits = function(parent, protoProps, staticProps) {
+        var child;
+
+        // The constructor function for the new subclass is either defined by you
+        // (the "constructor" property in your `extend` definition), or defaulted
+        // by us to simply call the parent's constructor.
+        if (protoProps && protoProps.hasOwnProperty('constructor')) {
+            child = protoProps.constructor;
+        } else {
+            child = function(){ parent.apply(this, arguments); };
+        }
+
+        // Inherit class (static) properties from parent.
+        $.extend(child, parent);
+
+        // Set the prototype chain to inherit from `parent`, without calling
+        // `parent`'s constructor function.
+        ctor.prototype = parent.prototype;
+        child.prototype = new ctor();
+
+        // Add prototype properties (instance properties) to the subclass,
+        // if supplied.
+        if (protoProps) $.extend(child.prototype, protoProps);
+
+        // Add static properties to the constructor function, if supplied.
+        if (staticProps) $.extend(child, staticProps);
+
+        // Correctly set child's `prototype.constructor`.
+        child.prototype.constructor = child;
+
+        // Set a convenience property in case the parent's prototype is needed later.
+        child.__super__ = parent.prototype;
+
+        return child;
+    };
+
+    var extend = function (protoProps, classProps) {
+        var child = inherits(this, protoProps, classProps);
+        child.extend = this.extend;
+        return child;
+    };
+
+    // Set up inheritance for the model, collection, and view.
+    MonkeyBone.Model.extend = MonkeyBone.View.extend = extend;
+
+    MonkeyBean.MonkeyModuleManager.register('MonkeyWeather', function() {
+        var monkeyWeatherModel = MonkeyBone.Model.extend({
+            defaults : {
+                filter : /www.douban.com\/(mine|(people\/.+\/)$)/,
+                url : 'http://www.google.com/ig/api?weather={1}&hl=zh-cn',
+                condition : '',
+                icon : '',
+                place : '',
+                temp : ''
+            },
+
+            initialize : function() {
+                log('weather initialize');
+                this.fetch();
+            },
+
+            fetch : function() {
+                var place = $('.user-info > a'),
+                    a,
+                    that = this;
+                log('-----------');
+                if(!place || !$.trim(place.text())) return;
+                a = place.attr('href').match(/http:\/\/(.*)\.douban\.com/);
+                place = place.text();
+                log('aaaaaa---' + RegExp.$1);
+
+                GM_xmlhttpRequest({
+                    method : 'GET',
+                    url : this.get('url').replace('{1}', RegExp.$1),
+                    headers :  {
+                        Accept: 'text/xml'
+                    },
+                    onload : function(resp) {
+                        xml.parse(resp.responseText);
+                        var current = xml.tag('current_conditions');
+                        that.set({
+                            condition : xml.tag('condition', current).data,
+                            icon : xml.tag('icon', current).data,
+                            temp : xml.tag('temp_c', current).data,
+                            place : place
+                        });
+                    }
+                });
+            }
+        });
+
+        var monkeyWeahterView = MonkeyBone.View.extend({
+            css : '.monkeybean-weather{position:relative;top:10px;}',
+
+            html : '<div style="float:left;margin-right:10px;">\
+                    <img height="40" width="40" alt="{1}" src="http://g0.gstatic.com{2}">\
+                    <br>\
+                </div>\
+                <span><strong>{3}</strong></span>\
+                <span>{4}℃</span>\
+                <div style="float:">当前：&nbsp;{1}\
+                </div>',
+
+            el : $('#profile'),
+
+            initialize : function() {
+                var model = new monkeyWeatherModel();
+                model.bind('change', this.render, this);
+                this.model = model;
+            },
+
+            render : function() {
+                if(!this.el) return;
+                var container = div.cloneNode(true);
+                container.className = 'monkeybean-weather';
+                log(this.model);
+                container.innerHTML = this.html.replace(/\{1\}/g, this.model.get('condition'))
+                                                .replace('{2}', this.model.get('icon'))
+                                                .replace('{3}', this.model.get('place'))
+                                                .replace('{4}', this.model.get('temp'));
+                $(container).insertBefore(this.el);
+            }
+        });
+
+        return {
+            model : monkeyWeatherModel,
+            view : monkeyWeahterView,
+            filter : /www.douban.com\/(mine|(people\/.+\/)$)/,
+            load : function() {
+                new monkeyWeahterView();
+            }
+        }
+    }());
 
 
-    var userName = GM_getValue(cName) || '',
-        userLocation = GM_getValue(cLocation) || '',
+
+    var userName = MonkeyBean.get(cName, ''),
+        userLocation = MonkeyBean.get(cLocation, ''),
         guid = 0;
-log('test debug Mode');
+    log('test debug Mode');
 //log(userName);
 //log(userLocation);
 
@@ -540,7 +778,7 @@ log('test debug Mode');
      *      3，模块通过管理员注册，需要提供GUID
      *      4，但是1里面的那个map是神马样子的呢？怎么弄好一些呢？
      */
-    //猴子模块管理员,请叫我Mr.TM  (triple M)
+        //猴子模块管理员,请叫我Mr.TM  (triple M)
     var monkeyModuleManager = (function() {
         var moduleTree = [],  //模块树，所有模块都生长在树上。
             turnOn,
@@ -596,49 +834,47 @@ log('test debug Mode');
         }
     };
 
-    $.extend(MonkeyModule.prototype, publisher);
-
 
     //猴子天气
     /**
      * 使用Google API，地址 http://www.google.com/ig/api?weather=Beijing&hl=zh-cn
      */
-    var monkeyWeather = new monkeyModule('weather', {
-        filter : /www.douban.com\/(mine|(people\/.+\/)$)/,
-        url : 'http://www.google.com/ig/api?weather={1}&hl=zh-cn',
-        load : function() {
-            //log(this.name + ' 准备加载！');
-            var place = nuts.query('.user-info > a'),
-                a;
-            if(!place || !trim(place.textContent)) return;
-            a = place.href.split('/');
-            place = place.textContent;
+    /*var monkeyWeather = new MonkeyModule('weather', {
+     filter : /www.douban.com\/(mine|(people\/.+\/)$)/,
+     url : 'http://www.google.com/ig/api?weather={1}&hl=zh-cn',
+     load : function() {
+     //log(this.name + ' 准备加载！');
+     var place = nuts.query('.user-info > a'),
+     a;
+     if(!place || !trim(place.textContent)) return;
+     a = place.href.split('/');
+     place = place.textContent;
 
-            GM_xmlhttpRequest({
-                method : 'GET',
-                url : monkeyWeather.url.replace('{1}', a[a.length-2]),
-                onload : function(resp) {
-                    xml.parse(resp.responseText);
-                    var current = xml.tag('current_conditions'),
-                        condition = xml.tag('condition', current).data,
-                        icon = xml.tag('icon', current).data,
-                        temp = xml.tag('temp_c', current).data,
-                        profile = document.getElementById('profile'),
-                        container = div.cloneNode(true);
+     GM_xmlhttpRequest({
+     method : 'GET',
+     url : monkeyWeather.url.replace('{1}', a[a.length-2]),
+     onload : function(resp) {
+     xml.parse(resp.responseText);
+     var current = xml.tag('current_conditions'),
+     condition = xml.tag('condition', current).data,
+     icon = xml.tag('icon', current).data,
+     temp = xml.tag('temp_c', current).data,
+     profile = document.getElementById('profile'),
+     container = div.cloneNode(true);
 
-                    container.style.cssText = 'position:relative;top:10px;';
-                    container.innerHTML = monkeyMirror.weather.replace(/\{1\}/g, condition)
-                        .replace('{2}', icon)
-                        .replace('{3}', place)
-                        .replace('{4}', temp);
-                    profile.parentNode.insertBefore(container, profile)
-                }
-            })
-        }
-    });
+     container.style.cssText = 'position:relative;top:10px;';
+     container.innerHTML = monkeyMirror.weather.replace(/\{1\}/g, condition)
+     .replace('{2}', icon)
+     .replace('{3}', place)
+     .replace('{4}', temp);
+     profile.parentNode.insertBefore(container, profile)
+     }
+     })
+     }
+     });*/
 
     //猴子导航栏——用于显示顶部导航栏的二级菜单
-    var monkeyNav = new monkeyModule('nav', {
+    var monkeyNav = new MonkeyModule('nav', {
         css : '#_monkey_secondNav{display:block;width:600px;} #_monkey_secondNav ul{position:relative;z-index:5;} #_monkey_secondNav ul li{float:none;}',
         load : function() {
             //log(this.name + ' 准备加载！');
@@ -757,7 +993,7 @@ log('test debug Mode');
     };
 
     //猴子回复增强模块，适用于小组回复，书籍影视评论等，功能包括楼层数显示。
-    var monkeyComment = new monkeyModule('comment', {
+    var monkeyComment = new MonkeyModule('comment', {
         on : false, //是否开启
         css : '._monkey_floor{ float:right; margin-right:5px;}',
         toolRel : {
@@ -870,7 +1106,7 @@ log('test debug Mode');
     });
 
     //猴子浮动工具条，整合多个工具，例如楼层跳转等
-    var monkeyFloatToolbar = new monkeyModule('floatToolbar', {
+    var monkeyFloatToolbar = new MonkeyModule('floatToolbar', {
         css : '',
         load : function() {
             GM_addStyle(this.css);
@@ -915,7 +1151,7 @@ log('test debug Mode');
     });
 
     //增强搜索栏——代码来源于豆瓣助手
-    var monkeySearchBar = new monkeyModule('search', {
+    var monkeySearchBar = new MonkeyModule('search', {
         css : '.db_scr_btm{background:#E9F4E9;color:#0C7823;cursor:pointer;display:none;float:left;text-align:center;position:relative;width:19%;border-left:1px solid #E9F4E9;border-right:1px solid #E9F4E9;} .db_scr_btm:hover{position:relative;top:-1px;border-bottom:1px solid #a6d098;border-left:1px solid #a6d098;border-right:1px solid #a6d098;background:#fff;} .nav-srh:hover .db_scr_btm{display:block;}',
         load : function() {
             var form = nuts.query('form[name=ssform]'),
@@ -948,6 +1184,7 @@ log('test debug Mode');
     });
 
     nuts.load();
+    MonkeyBean.MonkeyModuleManager.turnOn();
 
     log(((new Date()) - startTime)/1000 + '秒');
-})(window)
+})(window, unsafeWindow.$)
