@@ -177,7 +177,7 @@ typeof Updater != 'undefined' && new Updater({
             MonkeyBean.debugMode && typeof console !== 'undefined' && console.log(msg);
         },
 
-        //TODO 使用豆瓣API有限制，每个IP每分钟10次，如果加上key的话是每分钟40次，如果超过限制会被封IP，因此要记录调用API次数及其间隔。
+        //TODO：使用豆瓣API有限制，每个IP每分钟10次，如果加上key的话是每分钟40次，如果超过限制会被封IP，因此要记录调用API次数及其间隔。
         useAPI : function() {
             var count = this.get(apiCount),
                 lastTime = this.get(apiLastTime);
@@ -211,7 +211,7 @@ typeof Updater != 'undefined' && new Updater({
         isLogin : function() {
             return (typeof this.login !== 'undefined' && this.login) || (this.login = !!this.getCk());
         },
-        //TODO
+        //TODO：获取用户ID，有问题
         userId : (function() {
             var str = cookie.get('dbcl2');
             return str && str.split(':')[0];
@@ -487,6 +487,9 @@ typeof Updater != 'undefined' && new Updater({
     // Set up inheritance for the model, collection, and view.
     MonkeyBone.Model.extend = MonkeyBone.View.extend = extend;
 
+    /**
+     * 天气模块
+     */
     MonkeyBean.MonkeyModuleManager.register('MonkeyWeather', (function() {
         var monkeyWeatherModel = MonkeyBone.Model.extend({
             defaults : {
@@ -506,7 +509,6 @@ typeof Updater != 'undefined' && new Updater({
                 var place = $('.user-info > a'),
                     a,
                     that = this;
-                log('-----------');
                 if(!place || !$.trim(place.text())) return;
                 a = place.attr('href').match(/http:\/\/(.*)\.douban\.com/);
                 place = place.text();
@@ -584,7 +586,7 @@ typeof Updater != 'undefined' && new Updater({
 
 
         var monkeyMessageBoardToolView = MonkeyBone.View.extend({
-            //TODO <span class="gact">
+            //TODO：<span class="gact">
             html : '<a class="j a_confirm_link" href="/people/sunnylost/board?start=0&amp;post_remove=33974762&amp;ck=' + MonkeyBean.getCk() + '" rel="nofollow">删除</a>\
                     &nbsp; &nbsp; <a href="/doumail/write?to={2}">回豆邮</a>\
                     &nbsp; &nbsp; <a href="javascript:void(0);" monkey-data="replyto-{2}" title="回复到对方留言板">回复</a>',
@@ -645,7 +647,7 @@ typeof Updater != 'undefined' && new Updater({
                     this.anotherView.bind('reply', this.reply, this);
                 }
             },
-            //TODO
+            //TODO:点击回复按钮时，应该可以回复到对方留言板
             reply : function(userId) {
                 log('trigger===' + userId);
             }
@@ -772,15 +774,6 @@ typeof Updater != 'undefined' && new Updater({
                     </ul>',
 
         'myDouban' : '<a href="http://www.douban.com/people/' + userName + '/">我的豆瓣</a>',
-
-        'weather' : '<div style="float:left;margin-right:10px;">\
-                    <img height="40" width="40" alt="{1}" src="http://g0.gstatic.com{2}">\
-                    <br>\
-                </div>\
-                <span><strong>{3}</strong></span>\
-                <span>{4}℃</span>\
-                <div style="float:">当前：&nbsp;{1}\
-                </div>',
         //留言工具条
         'commentToolbar' : '<span data="{1}" >\
                               <span>|</span>\
@@ -1150,7 +1143,7 @@ typeof Updater != 'undefined' && new Updater({
 
             pageParam.floorStart = start;
             type = (reply && 'group') || (comments && 'entertain');
-            //TODO 以下内容待重构
+            //TODO：以下内容待重构
             if(reply) {
                 pageParam.floor = items = nuts.queryAll(monkeySelector[type]['commentItems'], reply);
                 len = items.length;
