@@ -585,7 +585,7 @@ typeof Updater != 'undefined' && new Updater({
 
         var monkeyMessageBoardToolView = MonkeyBone.View.extend({
             //TODO <span class="gact">
-            html : '<a class="j a_confirm_link" href="/people/sunnylost/board?start=0&amp;post_remove=33974762&amp;ck=' + MonkeyBean.ck + '" rel="nofollow">删除</a>\
+            html : '<a class="j a_confirm_link" href="/people/sunnylost/board?start=0&amp;post_remove=33974762&amp;ck=' + MonkeyBean.getCk() + '" rel="nofollow">删除</a>\
                     &nbsp; &nbsp; <a href="/doumail/write?to={2}">回豆邮</a>\
                     &nbsp; &nbsp; <a href="javascript:void(0);" monkey-data="replyto-{2}" title="回复到对方留言板">回复</a>',
 
@@ -626,7 +626,7 @@ typeof Updater != 'undefined' && new Updater({
 
         var monkeyMessageBoardView = MonkeyBone.View.extend({
             html : '<form style="margin-bottom:12px" method="post" name="bpform">\
-                        <div style="display:none;"><input type="hidden" value="' + MonkeyBean.ck + '" name="ck"></div>\
+                        <div style="display:none;"><input type="hidden" value="' + MonkeyBean.getCk() + '" name="ck"></div>\
                         <textarea style="width:97%;height:50px;margin-bottom:5px" name="bp_text"></textarea>\
                         <input type="submit" value=" 留言 " name="bp_submit">\
                     </form>',
@@ -640,8 +640,8 @@ typeof Updater != 'undefined' && new Updater({
 
             render : function(isBoard) {
                 if(isBoard) {
-                    var tmp = this.el.innerHTML;
-                    this.el.innerHTML = this.html + tmp;
+                    var tmp = el[0].outerHTML;
+                    $('div.indent').html(this.html + tmp);
                     this.anotherView.bind('reply', this.reply, this);
                 }
             },
