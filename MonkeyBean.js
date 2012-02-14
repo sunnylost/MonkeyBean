@@ -15,7 +15,7 @@ typeof Updater != 'undefined' && new Updater({
 }).check();
 
 
-(function(window, $) {
+(function(window, $, undefined) {
     if(window !== window.top) return false;  //防止在iframe中执行
 
     var startTime = new Date();
@@ -23,75 +23,29 @@ typeof Updater != 'undefined' && new Updater({
     /*-------------------Begin--------------------*/
     var cName = 'monkey.username',
         cLocation = 'monkey.location',
+        apiCount = 'MonkeyBean.API.count',
+        apiLastTime = 'MonkeyBean.API.lastTime',
+        interval = 60000,  //请求api的间隔
+        limit = 10,       //在以上间隔内，最多请求次数，默认10次
+
         cHighLightColor = '#46A36A',  //高亮用户发言的颜色
         cBlankStr = '',                 //空白字符串
         ctor = function(){},
+        viewOptions = ['model', 'collection', 'el', 'id', 'attributes', 'className', 'tagName'],
 
         div = document.createElement('div'),
 
         hasOwn = Object.prototype.hasOwnProperty,
 
         mine = /\/mine/,
-        people = /\/people\/*\//;
+        people = /\/people\/(.*)\//,
+        eventSplitter = /^(\S+)\s*(.*)$/, // from Backbone.js
+        //豆瓣API
+        api = {
+            'people' : 'http://api.douban.com/people/{1}'  //用户信息
+        };
 
-    var MonkeyBean = {
-        author : 'sunnylost',
-        updateTime : '20120213',
-        password : 'Ooo! Ooo! Aaa! Aaa! :(|)',
 
-        path : location.hostname + location.pathname,
-
-        //开启debug模式
-        debugMode : true,
-
-        log : function(msg) {
-            MonkeyBean.debugMode && typeof console !== 'undefined' && console.log(msg);
-        },
-
-        get : function(key, defaultVal) {
-            return GM_getValue(key, defaultVal);
-        },
-
-        set : function(key, value) {
-            GM_setValue(key, value);
-        },
-
-        del : function(key) {
-            GM_deletetValue(key);
-        },
-
-        //是否登录
-        isLogin : function() {
-            return (typeof this.login !== 'undefined' && this.login) || (this.login = !!cookie.get('ck'));
-        },
-
-        MonkeyModuleManager : (function() {
-            var moduleTree = {},  //模块树，所有模块都生长在树上。
-                turnOn,
-                register;
-
-            register = function(moduleName, module) {
-                moduleTree[moduleName] = module;
-            };
-
-            turnOn = function() {
-                var m;
-                log(moduleTree);
-                for(m in moduleTree) {
-                    log('------' + moduleTree[m].filter.test(MonkeyBean.path));
-                    if(hasOwn.call(moduleTree, m)) {
-                        //MonkeyBean.get('MonkeyBean.' + m, false) 配置
-                        moduleTree[m].filter.test(MonkeyBean.path) && moduleTree[m].load();
-                    }
-                }
-            };
-
-            return {
-                register : register,
-                turnOn : turnOn
-            }
-        })()
-    };
 
     //-------------------------猴子工具箱----------------------------------
         var monkeyToolBox = {
@@ -106,13 +60,16 @@ typeof Updater != 'undefined' && new Updater({
 
             cookie : {
                 get : function(name) {
-                    if(document.cookie.length > 0) {
-                        var start = document.cookie.indexOf(trim(name) + '='),
-                            end;
+                    //console.log('cookie---' + document.cookie);
+                    var start,
+                        end,
+                        len = document.cookie.length;
+                    if(len > 0) {
+                        start = document.cookie.indexOf(trim(name) + '=');
                         if(start != -1) {
                             start = start + name.length + 1;
                             end = document.cookie.indexOf(';', start);
-                            if(end == -1) end = document.cookie.length;
+                            if(end == -1) end = len;
                             return decodeURI(document.cookie.substring(start, end));
                         }
                     }
@@ -204,10 +161,97 @@ typeof Updater != 'undefined' && new Updater({
             show = monkeyToolBox.show,
             hide = monkeyToolBox.hide,
             trim = monkeyToolBox.trim,
-            position = monkeyToolBox.position,
-            log = MonkeyBean.log;
+            position = monkeyToolBox.position;
 
-    //猴骨~MVC~模仿backbone,http://documentcloud.github.com/backbone/
+    var MonkeyBean = {
+        author : 'sunnylost',
+        updateTime : '20120213',
+        password : 'Ooo! Ooo! Aaa! Aaa! :(|)',
+
+        path : location.hostname + location.pathname,
+
+        //开启debug模式
+        debugMode : true,
+
+        log : function(msg) {
+            MonkeyBean.debugMode && typeof console !== 'undefined' && console.log(msg);
+        },
+
+        //TODO 使用豆瓣API有限制，每个IP每分钟10次，如果加上key的话是每分钟40次，如果超过限制会被封IP，因此要记录调用API次数及其间隔。
+        useAPI : function() {
+            var count = this.get(apiCount),
+                lastTime = this.get(apiLastTime);
+
+            if(count === undefined && lastTime === undefined) {
+                //第一次使用
+                this.set(apiCount, 1);
+                this.set(apiLastTime, new Date);
+            } else {
+                typeof +count === 'number' && this.set(apiCount, +count + 1);
+            }
+        },
+
+        getUserInfo : function(nickName) {
+
+        },
+
+        get : function(key, defaultVal) {
+            return GM_getValue(key, defaultVal);
+        },
+
+        set : function(key, value) {
+            GM_setValue(key, value);
+        },
+
+        del : function(key) {
+            GM_deletetValue(key);
+        },
+
+        //是否登录
+        isLogin : function() {
+            return (typeof this.login !== 'undefined' && this.login) || (this.login = !!this.getCk());
+        },
+        //TODO
+        userId : (function() {
+            var str = cookie.get('dbcl2');
+            return str && str.split(':')[0];
+        })(),
+
+        getCk : function() {
+          return this.ck || (this.ck = cookie.get('ck'));
+        },
+
+        MonkeyModuleManager : (function() {
+            var moduleTree = {},  //模块树，所有模块都生长在树上。
+                turnOn,
+                register;
+
+            register = function(moduleName, module) {
+                moduleTree[moduleName] = module;
+            };
+
+            turnOn = function() {
+                var m;
+                //log(moduleTree);
+                for(m in moduleTree) {
+                    if(hasOwn.call(moduleTree, m)) {
+                       // log('------' + m + '----' + moduleTree[m]);
+                        //MonkeyBean.get('MonkeyBean.' + m, false) 配置
+                        moduleTree[m].filter.test(MonkeyBean.path) && moduleTree[m].load();
+                    }
+                }
+            };
+
+            return {
+                register : register,
+                turnOn : turnOn
+            }
+        })()
+    };
+    var log = MonkeyBean.log;
+    log('userId===' + MonkeyBean.userId);
+
+    //猴骨~MVC~模仿backbone,http://backbonejs.org
     var MonkeyBone = {
         Event : {
             subscribers : {
@@ -270,7 +314,10 @@ typeof Updater != 'undefined' && new Updater({
 
         View : function(options) {
             log(options);
+            this._configure(options || {});
+            this._ensureElement();
             this.initialize.apply(this, arguments);
+            this.delegateEvents();
         }
     };
 
@@ -309,6 +356,88 @@ typeof Updater != 'undefined' && new Updater({
         render : function() {},
         initialize : function() {
             return this;
+        },
+
+        // Set callbacks, where `this.events` is a hash of
+        //
+        // *{"event selector": "callback"}*
+        //
+        //     {
+        //       'mousedown .title':  'edit',
+        //       'click .button':     'save'
+        //       'click .open':       function(e) { ... }
+        //     }
+        //
+        // pairs. Callbacks will be bound to the view, with `this` set properly.
+        // Uses event delegation for efficiency.
+        // Omitting the selector binds the event to `this.el`.
+        // This only works for delegate-able events: not `focus`, `blur`, and
+        // not `change`, `submit`, and `reset` in Internet Explorer.
+        delegateEvents : function(events) {
+            var key, method, match, eventName, selector;
+            if(!(events || (events = this.events))) return;
+            for(key in events) {
+                method = events[key];
+                if(!$.isFunction()) method = this[events[key]];
+                if(!method) return;
+                match = key.match(eventSplitter);
+                eventName = match[1];
+                selector = match[2];
+                method = $.bind(method, this);
+                if (selector === '') {
+                  this.$el.bind(eventName, method);
+                } else {
+                  this.$el.delegate(selector, eventName, method);
+                }
+            }
+        },
+
+         // Change the view's element (`this.el` property), including event
+        // re-delegation.
+        setElement: function(element, delegate) {
+          this.$el = $(element);
+          this.el = this.$el[0];
+          if (delegate !== false) this.delegateEvents();
+          return this;
+        },
+
+        // For small amounts of DOM Elements, where a full-blown template isn't
+        // needed, use **make** to manufacture elements, one at a time.
+        //
+        //     var el = this.make('li', {'class': 'row'}, this.model.escape('title'));
+        //
+        make: function(tagName, attributes, content) {
+          var el = document.createElement(tagName);
+          if (attributes) $(el).attr(attributes);
+          if (content) $(el).html(content);
+          return el;
+        },
+
+        // Performs the initial configuration of a View with a set of options.
+        // Keys with special meaning *(model, collection, id, className)*, are
+        // attached directly to the view.
+        _configure: function(options) {
+          if (this.options) options = $.extend({}, this.options, options);
+          for (var i = 0, l = viewOptions.length; i < l; i++) {
+            var attr = viewOptions[i];
+            if (options[attr]) this[attr] = options[attr];
+          }
+          this.options = options;
+        },
+
+        // Ensure that the View has a DOM element to render into.
+        // If `this.el` is a string, pass it through `$()`, take the first
+        // matching element, and re-assign it to `el`. Otherwise, create
+        // an element from the `id`, `className` and `tagName` properties.
+        _ensureElement: function() {
+          if (!this.el) {
+            var attrs = this.attributes || {};
+            if (this.id) attrs.id = this.id;
+            if (this.className) attrs['class'] = this.className;
+            this.setElement(this.make(this.tagName, attrs), false);
+          } else {
+            this.setElement(this.el, false);
+          }
         }
     });
 
@@ -358,10 +487,9 @@ typeof Updater != 'undefined' && new Updater({
     // Set up inheritance for the model, collection, and view.
     MonkeyBone.Model.extend = MonkeyBone.View.extend = extend;
 
-    MonkeyBean.MonkeyModuleManager.register('MonkeyWeather', function() {
+    MonkeyBean.MonkeyModuleManager.register('MonkeyWeather', (function() {
         var monkeyWeatherModel = MonkeyBone.Model.extend({
             defaults : {
-                filter : /www.douban.com\/(mine|(people\/.+\/)$)/,
                 url : 'http://www.google.com/ig/api?weather={1}&hl=zh-cn',
                 condition : '',
                 icon : '',
@@ -382,7 +510,6 @@ typeof Updater != 'undefined' && new Updater({
                 if(!place || !$.trim(place.text())) return;
                 a = place.attr('href').match(/http:\/\/(.*)\.douban\.com/);
                 place = place.text();
-                log('aaaaaa---' + RegExp.$1);
 
                 GM_xmlhttpRequest({
                     method : 'GET',
@@ -428,7 +555,6 @@ typeof Updater != 'undefined' && new Updater({
                 if(!this.el) return;
                 var container = div.cloneNode(true);
                 container.className = 'monkeybean-weather';
-                log(this.model);
                 container.innerHTML = this.html.replace(/\{1\}/g, this.model.get('condition'))
                                                 .replace('{2}', this.model.get('icon'))
                                                 .replace('{3}', this.model.get('place'))
@@ -445,9 +571,93 @@ typeof Updater != 'undefined' && new Updater({
                 new monkeyWeahterView();
             }
         }
-    }());
+    }()));
+
+    /**
+     * 留言板，增加回复功能
+     * 适用页面：个人主页与留言板页
+     */
+    MonkeyBean.MonkeyModuleManager.register('MonkeyMessageBoard', (function() {
+        var isBoard = $('span.gact').length > 0,  //如果存在类为gact的span，表明在board页面，否则在个人主页
+            el = $('ul.mbt');
+        log('board==' + isBoard);
 
 
+        var monkeyMessageBoardToolView = MonkeyBone.View.extend({
+            //TODO <span class="gact">
+            html : '<a class="j a_confirm_link" href="/people/sunnylost/board?start=0&amp;post_remove=33974762&amp;ck=' + MonkeyBean.ck + '" rel="nofollow">删除</a>\
+                    &nbsp; &nbsp; <a href="/doumail/write?to={2}">回豆邮</a>\
+                    &nbsp; &nbsp; <a href="javascript:void(0);" monkey-data="replyto-{2}" title="回复到对方留言板">回复</a>',
+
+            el : el,
+
+            initialize : function() {
+                this.render(isBoard);
+            },
+
+            render : function(type) {
+                if(!this.el || (this.el = this.el.querySelectorAll('li.mbtrdot')).length < 1) return;
+                var len = this.el.length,
+                    i = 0,
+                    that = this,
+                    name,
+                    tmp;
+                for(; i<len; i++) {
+                    tmp = this.el[i];
+                    tmp.getElementsByTagName('a')[0].href.match(people);
+                    name = RegExp.$1;
+                    if(type) {
+                        if(name != 'sunnylost') {
+                            tmp.getElementsByTagName('span')[1].innerHTML = this.html.replace(/\{2\}/g, name);
+                        }
+                    } else {
+                        if(tmp.getElementsByTagName('a')[0].href != 'http://www.douban.com/people/sunnylost/') {
+                            tmp.innerHTML += '<br/><br/><span class="gact">' + this.html.replace('{2}', name) + '</span>';
+                        } else {
+                            tmp.innerHTML += '<br/><br/><span class="gact"><a class="j a_confirm_link" href="/people/sunnylost/board?start=0&amp;post_remove=33974762&amp;ck=' + MonkeyBean.ck + '" rel="nofollow">删除</a></span>';
+                        }
+                    }
+                }
+                el.delegate('a[monkey-data]', 'click', function() {
+                    that.trigger('reply', $(this).attr('monkey-data').replace('replyto-', ''));
+                });
+            }
+        });
+
+        var monkeyMessageBoardView = MonkeyBone.View.extend({
+            html : '<form style="margin-bottom:12px" method="post" name="bpform">\
+                        <div style="display:none;"><input type="hidden" value="' + MonkeyBean.ck + '" name="ck"></div>\
+                        <textarea style="width:97%;height:50px;margin-bottom:5px" name="bp_text"></textarea>\
+                        <input type="submit" value=" 留言 " name="bp_submit">\
+                    </form>',
+
+            el : el,
+
+            initialize : function(view) {
+                this.anotherView = view;
+                this.render(isBoard);
+            },
+
+            render : function(isBoard) {
+                if(isBoard) {
+                    var tmp = this.el.innerHTML;
+                    this.el.innerHTML = this.html + tmp;
+                    this.anotherView.bind('reply', this.reply, this);
+                }
+            },
+            //TODO
+            reply : function(userId) {
+                log('trigger===' + userId);
+            }
+        });
+
+        return {
+            filter : /www.douban.com\/(people\/.+\/)(board)?$/,
+            load : function() {
+                new monkeyMessageBoardView(new monkeyMessageBoardToolView());
+            }
+        }
+    })());
 
     var userName = MonkeyBean.get(cName, ''),
         userLocation = MonkeyBean.get(cLocation, ''),
