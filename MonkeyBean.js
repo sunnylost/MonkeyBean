@@ -48,120 +48,119 @@ typeof Updater != 'undefined' && new Updater({
 
 
     //-------------------------猴子工具箱----------------------------------
-        var monkeyToolBox = {
-            //事件代理
-            delegate : function(parentel, child, eventtype, handler) {
-                parentel.addEventListener(eventtype, function(e) {
-                    if(e.target.tagName.toLowerCase() == child.toLowerCase()) {
-                        handler.call(e.target, e);
+    var monkeyToolBox = {
+        //事件代理
+        delegate : function(parentel, child, eventtype, handler) {
+            parentel.addEventListener(eventtype, function(e) {
+                if(e.target.tagName.toLowerCase() == child.toLowerCase()) {
+                    handler.call(e.target, e);
+                }
+            })
+        },
+
+        cookie : {
+            get : function(name) {
+                var start,
+                    end,
+                    len = document.cookie.length;
+                if(len > 0) {
+                    start = document.cookie.indexOf(name + '=');
+                    if(start != -1) {
+                        start = start + name.length + 1;
+                        end = document.cookie.indexOf(';', start);
+                        if(end == -1) end = len;
+                        return decodeURI(document.cookie.substring(start, end).replace(/"/g, ''));
                     }
-                })
-            },
-
-            cookie : {
-                get : function(name) {
-                    //console.log('cookie---' + document.cookie);
-                    var start,
-                        end,
-                        len = document.cookie.length;
-                    if(len > 0) {
-                        start = document.cookie.indexOf(trim(name) + '=');
-                        if(start != -1) {
-                            start = start + name.length + 1;
-                            end = document.cookie.indexOf(';', start);
-                            if(end == -1) end = len;
-                            return decodeURI(document.cookie.substring(start, end));
-                        }
-                    }
-                    return '';
                 }
-            },
-
-            css : function(el, attribute, value) {
-                if(typeof value != 'undefined') {
-                    el.style[attribute] = value;
-                }
-                return el.style[attribute];
-            },
-
-            //地址查询字符串搜索
-            locationQuery : function() {
-                if(location.search.length < 0) return {};
-
-                var queryarr = location.search.substring(1).split('&'),
-                    len = queryarr.length,
-                    item,
-                    result = {};
-                while(len) {
-                    item = queryarr[--len].split('=');
-                    result[decodeURIComponent(item[0])] = decodeURIComponent(item[1]);
-                }
-                return result;
-            },
-
-            xml : {
-                parse : function(text) {
-                    var xmlparse = new DOMParser();
-                    this.xmldom = xmlparse.parseFromString(text, 'text/xml');
-                    return this;
-                },
-
-                tag : function(name, el) {
-                    el = el || this.xmldom;
-                    this.el = el.getElementsByTagName(name)[0];
-                    this.el && (this.el.data = this.attr('data'));
-                    return this.el;
-                },
-
-                attr : function(name) {
-                    return this.el.getAttribute(name);
-                },
-
-                tostring : function() {
-                    return this.el || {};
-                }
-            },
-
-            toggle : function(el, value) {
-                if(!el) return;
-                if(el.style.display != 'none') {
-                    monkeytoolbox.hide(el);
-                } else {
-                    monkeytoolbox.show(el, value);
-                }
-            },
-
-            show : function(el, value) {
-                el && (el.style.display = value || 'block');
-            },
-
-            hide : function(el) {
-                el && (el.style.display = 'none');
-            },
-
-            trim : function(s) {
-                return (s + '').trim();
-            },
-
-            position : function(el) {
-                var rect = el.getBoundingClientRect();
-                return {
-                    'left' : rect.left + window.scrollX,
-                    'top' : rect.top + window.scrollY
-                }
+                return '';
             }
-        };
+        },
+
+        css : function(el, attribute, value) {
+            if(typeof value != 'undefined') {
+                el.style[attribute] = value;
+            }
+            return el.style[attribute];
+        },
+
+        //地址查询字符串搜索
+        locationQuery : function() {
+            if(location.search.length < 0) return {};
+
+            var queryarr = location.search.substring(1).split('&'),
+                len = queryarr.length,
+                item,
+                result = {};
+            while(len) {
+                item = queryarr[--len].split('=');
+                result[decodeURIComponent(item[0])] = decodeURIComponent(item[1]);
+            }
+            return result;
+        },
+
+        xml : {
+            parse : function(text) {
+                var xmlparse = new DOMParser();
+                this.xmldom = xmlparse.parseFromString(text, 'text/xml');
+                return this;
+            },
+
+            tag : function(name, el) {
+                el = el || this.xmldom;
+                this.el = el.getElementsByTagName(name)[0];
+                this.el && (this.el.data = this.attr('data'));
+                return this.el;
+            },
+
+            attr : function(name) {
+                return this.el.getAttribute(name);
+            },
+
+            tostring : function() {
+                return this.el || {};
+            }
+        },
+
+        toggle : function(el, value) {
+            if(!el) return;
+            if(el.style.display != 'none') {
+                monkeytoolbox.hide(el);
+            } else {
+                monkeytoolbox.show(el, value);
+            }
+        },
+
+        show : function(el, value) {
+            el && (el.style.display = value || 'block');
+        },
+
+        hide : function(el) {
+            el && (el.style.display = 'none');
+        },
+
+        trim : function(s) {
+            return (s + '').trim();
+        },
+
+        position : function(el) {
+            var rect = el.getBoundingClientRect();
+            return {
+                'left' : rect.left + window.scrollX,
+                'top' : rect.top + window.scrollY
+            }
+        }
+    };
 
     //shortcuts
-        var xml = monkeyToolBox.xml,
-            cookie = monkeyToolBox.cookie,
-            css = monkeyToolBox.css,
-            query = monkeyToolBox.locationQuery,
-            delegate = monkeyToolBox.delegate,
-            show = monkeyToolBox.show,
-            hide = monkeyToolBox.hide,
-            trim = monkeyToolBox.trim,
-            position = monkeyToolBox.position;
+    var xml = monkeyToolBox.xml,
+        cookie = monkeyToolBox.cookie,
+        css = monkeyToolBox.css,
+        query = monkeyToolBox.locationQuery,
+        delegate = monkeyToolBox.delegate,
+        show = monkeyToolBox.show,
+        hide = monkeyToolBox.hide,
+        trim = monkeyToolBox.trim,
+        position = monkeyToolBox.position;
 
     var MonkeyBean = {
         author : 'sunnylost',
@@ -212,13 +211,13 @@ typeof Updater != 'undefined' && new Updater({
             return (typeof this.login !== 'undefined' && this.login) || (this.login = !!this.getCk());
         },
         //TODO：获取用户ID，有问题
-        userId : (function() {
+        userId : function() {
             var str = cookie.get('dbcl2');
             return str && str.split(':')[0];
-        })(),
+        },
 
         getCk : function() {
-          return this.ck || (this.ck = cookie.get('ck'));
+            return this.ck || (this.ck = cookie.get('ck'));
         },
 
         MonkeyModuleManager : (function() {
@@ -235,7 +234,7 @@ typeof Updater != 'undefined' && new Updater({
                 //log(moduleTree);
                 for(m in moduleTree) {
                     if(hasOwn.call(moduleTree, m)) {
-                       // log('------' + m + '----' + moduleTree[m]);
+                        // log('------' + m + '----' + moduleTree[m]);
                         //MonkeyBean.get('MonkeyBean.' + m, false) 配置
                         moduleTree[m].filter.test(MonkeyBean.path) && moduleTree[m].load();
                     }
@@ -249,7 +248,6 @@ typeof Updater != 'undefined' && new Updater({
         })()
     };
     var log = MonkeyBean.log;
-    log('userId===' + MonkeyBean.userId);
 
     //猴骨~MVC~模仿backbone,http://backbonejs.org
     var MonkeyBone = {
@@ -385,20 +383,20 @@ typeof Updater != 'undefined' && new Updater({
                 selector = match[2];
                 method = $.bind(method, this);
                 if (selector === '') {
-                  this.$el.bind(eventName, method);
+                    this.$el.bind(eventName, method);
                 } else {
-                  this.$el.delegate(selector, eventName, method);
+                    this.$el.delegate(selector, eventName, method);
                 }
             }
         },
 
-         // Change the view's element (`this.el` property), including event
+        // Change the view's element (`this.el` property), including event
         // re-delegation.
         setElement: function(element, delegate) {
-          this.$el = $(element);
-          this.el = this.$el[0];
-          if (delegate !== false) this.delegateEvents();
-          return this;
+            this.$el = $(element);
+            this.el = this.$el[0];
+            if (delegate !== false) this.delegateEvents();
+            return this;
         },
 
         // For small amounts of DOM Elements, where a full-blown template isn't
@@ -407,22 +405,22 @@ typeof Updater != 'undefined' && new Updater({
         //     var el = this.make('li', {'class': 'row'}, this.model.escape('title'));
         //
         make: function(tagName, attributes, content) {
-          var el = document.createElement(tagName);
-          if (attributes) $(el).attr(attributes);
-          if (content) $(el).html(content);
-          return el;
+            var el = document.createElement(tagName);
+            if (attributes) $(el).attr(attributes);
+            if (content) $(el).html(content);
+            return el;
         },
 
         // Performs the initial configuration of a View with a set of options.
         // Keys with special meaning *(model, collection, id, className)*, are
         // attached directly to the view.
         _configure: function(options) {
-          if (this.options) options = $.extend({}, this.options, options);
-          for (var i = 0, l = viewOptions.length; i < l; i++) {
-            var attr = viewOptions[i];
-            if (options[attr]) this[attr] = options[attr];
-          }
-          this.options = options;
+            if (this.options) options = $.extend({}, this.options, options);
+            for (var i = 0, l = viewOptions.length; i < l; i++) {
+                var attr = viewOptions[i];
+                if (options[attr]) this[attr] = options[attr];
+            }
+            this.options = options;
         },
 
         // Ensure that the View has a DOM element to render into.
@@ -430,14 +428,14 @@ typeof Updater != 'undefined' && new Updater({
         // matching element, and re-assign it to `el`. Otherwise, create
         // an element from the `id`, `className` and `tagName` properties.
         _ensureElement: function() {
-          if (!this.el) {
-            var attrs = this.attributes || {};
-            if (this.id) attrs.id = this.id;
-            if (this.className) attrs['class'] = this.className;
-            this.setElement(this.make(this.tagName, attrs), false);
-          } else {
-            this.setElement(this.el, false);
-          }
+            if (!this.el) {
+                var attrs = this.attributes || {};
+                if (this.id) attrs.id = this.id;
+                if (this.className) attrs['class'] = this.className;
+                this.setElement(this.make(this.tagName, attrs), false);
+            } else {
+                this.setElement(this.el, false);
+            }
         }
     });
 
@@ -558,9 +556,9 @@ typeof Updater != 'undefined' && new Updater({
                 var container = div.cloneNode(true);
                 container.className = 'monkeybean-weather';
                 container.innerHTML = this.html.replace(/\{1\}/g, this.model.get('condition'))
-                                                .replace('{2}', this.model.get('icon'))
-                                                .replace('{3}', this.model.get('place'))
-                                                .replace('{4}', this.model.get('temp'));
+                    .replace('{2}', this.model.get('icon'))
+                    .replace('{3}', this.model.get('place'))
+                    .replace('{4}', this.model.get('temp'));
                 $(container).insertBefore(this.el);
             }
         });
@@ -579,49 +577,49 @@ typeof Updater != 'undefined' && new Updater({
      * 留言板，增加回复功能
      * 适用页面：个人主页与留言板页
      */
+    //TODO:尚未完成
     MonkeyBean.MonkeyModuleManager.register('MonkeyMessageBoard', (function() {
-        var isBoard = $('span.gact').length > 0,  //如果存在类为gact的span，表明在board页面，否则在个人主页
-            el = $('ul.mbt');
-        log('board==' + isBoard);
-
+        var el = $('ul.mbt');
 
         var monkeyMessageBoardToolView = MonkeyBone.View.extend({
             //TODO：<span class="gact">
-            html : '<a class="j a_confirm_link" href="/people/sunnylost/board?start=0&amp;post_remove=33974762&amp;ck=' + MonkeyBean.getCk() + '" rel="nofollow">删除</a>\
-                    &nbsp; &nbsp; <a href="/doumail/write?to={2}">回豆邮</a>\
-                    &nbsp; &nbsp; <a href="javascript:void(0);" monkey-data="replyto-{2}" title="回复到对方留言板">回复</a>',
+            html : {
+                'doumail' : '&nbsp; &nbsp; <a href="/doumail/write?to={1}">回豆邮</a>',
+                 'reply' : '&nbsp; &nbsp; <a href="JavaScript:void(0);" monkey-data="{1}[-]{2}" title="回复到对方留言板">回复</a>'
+            },
 
             el : el,
 
             initialize : function() {
-                this.render(isBoard);
+                this.render();
             },
 
-            render : function(type) {
+            render : function() {
                 if(!this.el || (this.el = this.el.querySelectorAll('li.mbtrdot')).length < 1) return;
                 var len = this.el.length,
                     i = 0,
                     that = this,
-                    name,
+                    id,
+                    nickName,
                     tmp;
                 for(; i<len; i++) {
                     tmp = this.el[i];
-                    tmp.getElementsByTagName('a')[0].href.match(people);
-                    name = RegExp.$1;
-                    if(type) {
-                        if(name != 'sunnylost') {
-                            tmp.getElementsByTagName('span')[1].innerHTML = this.html.replace(/\{2\}/g, name);
+                    var tempVar = tmp.getElementsByTagName('a')[0];
+                    nickName = tempVar.innerHTML;
+                    tempVar.href.match(people);
+                    id = RegExp.$1;
+                    if(id != 'sunnylost') {
+                        tmp = tmp.getElementsByTagName('span');
+                        if(tmp.length == 1) {
+                            tmp[0].parentNode.innerHTML += '<br/><br/><span class="gact">' + (this.html['doumail'] + this.html['reply']).replace(/\{1\}/g, id).replace('{2}', nickName) + '</span>';
+                        } else if(tmp.length == 2) {
+                            tmp[1].innerHTML += this.html['reply'].replace(/\{1\}/g, id).replace('{2}', nickName);
                         }
-                    } else {
-                        if(tmp.getElementsByTagName('a')[0].href != 'http://www.douban.com/people/sunnylost/') {
-                            tmp.innerHTML += '<br/><br/><span class="gact">' + this.html.replace('{2}', name) + '</span>';
-                        } else {
-                            tmp.innerHTML += '<br/><br/><span class="gact"><a class="j a_confirm_link" href="/people/sunnylost/board?start=0&amp;post_remove=33974762&amp;ck=' + MonkeyBean.ck + '" rel="nofollow">删除</a></span>';
-                        }
+
                     }
                 }
                 el.delegate('a[monkey-data]', 'click', function() {
-                    that.trigger('reply', $(this).attr('monkey-data').replace('replyto-', ''));
+                    that.trigger('reply', $(this).attr('monkey-data'));
                 });
             }
         });
@@ -631,30 +629,40 @@ typeof Updater != 'undefined' && new Updater({
                         <div style="display:none;"><input type="hidden" value="' + MonkeyBean.getCk() + '" name="ck"></div>\
                         <textarea style="width:97%;height:50px;margin-bottom:5px" name="bp_text"></textarea>\
                         <input type="submit" value=" 留言 " name="bp_submit">\
+                        <a href="javascript:void(0);" id="monkey_resetBtn" style="float:right;display:none;">点击恢复原状</a>\
                     </form>',
 
             el : el,
 
             initialize : function(view) {
                 this.anotherView = view;
-                this.render(isBoard);
+                this.render();
             },
 
-            render : function(isBoard) {
-                if(isBoard) {
-                    var tmp = el[0].outerHTML;
-                    $('div.indent').html(this.html + tmp);
-                    this.anotherView.bind('reply', this.reply, this);
-                }
+            render : function() {
+                this.form = $(this.html);
+                this.form.insertBefore(el);
+                this.resetBtn = $('#monkey_resetBtn');
+                this.resetBtn.bind('click', $.proxy(this.reset, this));
+                this.anotherView.bind('reply', this.reply, this);
             },
             //TODO:点击回复按钮时，应该可以回复到对方留言板
-            reply : function(userId) {
-                log('trigger===' + userId);
+            reply : function(userMsg) {
+                var tmpArr = userMsg.split('[-]');
+                this.form.find('[type="submit"]').attr('value', '回复到的' + tmpArr[1] + '的留言板');
+                this.form.attr('action', '/people/' + tmpArr[0] + '/board');
+                this.resetBtn.css('display', 'block');
+            },
+
+            reset : function() {
+                this.form.find('[type="submit"]').attr('value', '回复');
+                this.form.attr('action', '');
+                this.resetBtn.css('display', 'none');
             }
         });
 
         return {
-            filter : /www.douban.com\/(people\/.+\/)(board)?$/,
+            filter : /www.douban.com\/(people\/.+\/)(board)$/,
             load : function() {
                 new monkeyMessageBoardView(new monkeyMessageBoardToolView());
             }
@@ -917,13 +925,6 @@ typeof Updater != 'undefined' && new Updater({
     };
 
 //-------------------------模块----------------------------------
-    /**
-     * 关于这个模块功能我是这样设想的：
-     *      1，页面加载后，会通过搜索一个map，寻找哪些模块适用于该页面，找到后将这些模块启动
-     *      2，模块有父类，包含基本的方法，如load，开关状态(待考虑)
-     *      3，模块通过管理员注册，需要提供GUID
-     *      4，但是1里面的那个map是神马样子的呢？怎么弄好一些呢？
-     */
         //猴子模块管理员,请叫我Mr.TM  (triple M)
     var monkeyModuleManager = (function() {
         var moduleTree = [],  //模块树，所有模块都生长在树上。
