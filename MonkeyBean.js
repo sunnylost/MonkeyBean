@@ -156,7 +156,8 @@ typeof Updater != 'undefined' && new Updater({
         },
         //MonkeyBean初始化方法
         init : function() {
-            this.trigger('load');
+            //this.trigger('load');
+            this.MonkeyModuleManager.turnOn();
         },
 
         //是否登录
@@ -183,12 +184,14 @@ typeof Updater != 'undefined' && new Updater({
             };
 
             turnOn = function() {
-                var m;
+                var m, tmpModule;
                 //log(moduleTree);
                 for(m in moduleTree) {
                     if(hasOwn.call(moduleTree, m)) {
-                         log('------' + m + '----' + moduleTree[m].filter);
-                        moduleTree[m].filter.test(MonkeyBean.path) && moduleTree[m].load();
+                        tmpModule = moduleTree[m];
+                         //log('------' + m + '----' + moduleTree[m].filter);
+                        log(tmpModule.name + ' 加载~');
+                        tmpModule.fit() && (tmpModule.el && tmpModule.el.length > 0) && tmpModule.load();
                     }
                 }
             };
@@ -200,6 +203,8 @@ typeof Updater != 'undefined' && new Updater({
         })()
     };
     var log = MonkeyBean.log;
+
+    log('---------' + MonkeyBean.userId());
 
     var cusEvents = {
         subscribers : {
@@ -261,7 +266,6 @@ typeof Updater != 'undefined' && new Updater({
 
         init : function() {
             MonkeyBean.MonkeyModuleManager.register(this.name, this);
-            MonkeyBean.bind('load', this.load, this);
         },
 
         get : function(name) {
@@ -269,6 +273,7 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         set : function(key, value) {
+            this.attr = this.attr || {};
             var attrs, attr;
             if($.isPlainObject(key) || key == null) {
                 attrs = key;
@@ -284,6 +289,14 @@ typeof Updater != 'undefined' && new Updater({
 
         load : function() {
             //log(this.name + ' 准备加载！');
+        },
+        //检测是否适用于当前页面
+        fit : function() {
+            return !$.isArray(this.filter) && (this.filter.test(MonkeyBean.path));
+        },
+
+        //一个简单的模板方法
+        template : function(key, value) {
         },
 
         toString : function() {
@@ -344,9 +357,79 @@ typeof Updater != 'undefined' && new Updater({
     })
     /*********************************UI end**************************************************************/
 
+    /*********************************Common Function****************************************************************/
+    var monkeyCommentToolbox = {
+        //快捷回复
+        reply : function(data, el) {
+            log('reply=' + data);
+        },
+        //引用用户发言
+        quote : function(data) {
+            log('quote');
+        },
+        //只看该用户发言
+        only : function(data) {
+            var items = this.cache || (this.cache = $('[monkey_data]')),
+                len = items.length,
+                i = 0;
+            log(len);
+            if(len > 0) {
+                while(len--) {
+                    log(items[len]);
+                    items[len].attr('monkey_data') != data && items[len].hide();
+                }
+            }
+        },
+        //高亮该用户所有发言
+        highlight : function(data) {
+            var items = $('[monkey_data=' + data + ']'),
+                len = items.length,
+                i = 0;
+            //这里的this是monkeyComment.toolRel，但是不影响操作~
+            this.clicked = !this.clicked;
+            log(len);
+            if(len > 0) {
+                if(this.clicked) {
+                    while(len--) {
+                        css(items[len], 'backgroundColor', cHighLightColor);
+                    }
+                } else {
+                    while(len--) {
+                        css(items[len], 'backgroundColor', cBlankStr);
+                    }
+                }
+            }
+        },
+        //忽略该用户所有发言
+        ignore : function(data) {
+            var items = nuts.queryAll('[monkey_data=' + data + ']'),
+                len = items.length,
+                i = 0;
+            if(len > 0) {
+                while(len--) {
+                    hide(items[len]);
+                }
+            }
+        },
+        //还原为原始状态
+        reset : function(data) {
+            var items = this.cache || nuts.queryAll('[monkey_data]'),
+                len = items.length,
+                i = 0;
+            this.clicked = false;  //"高亮"里需要这个参数
+            if(len > 0) {
+                while(len--) {
+                    show(items[len]);
+                    css(items[len], 'backgroundColor', cBlankStr);
+                }
+            }
+        }
+    };
+
     /*********************************Module begin**************************************************************/
     /**
      * 天气模块
+     * updateTime : 2012-2-19
      */
     MonkeyModule('MonkeyWeather', {
         attr : {
@@ -418,6 +501,7 @@ typeof Updater != 'undefined' && new Updater({
      * 适用页面：个人主页与留言板页
      */
     //TODO:尚未完成，豆瓣助手在firefox也无法提交到别人的留言板，这个问题推迟解决
+    /**
     MonkeyModule('MonkeyMessageBoard', {
         //TODO：<span class="gact">
         html : {
@@ -488,6 +572,7 @@ typeof Updater != 'undefined' && new Updater({
             this.resetBtn.css('display', 'none');
         }
     });
+     */
 
     //TODO 猴子导航栏——用于显示顶部导航栏的二级菜单
     /**
@@ -544,6 +629,156 @@ typeof Updater != 'undefined' && new Updater({
         }
     });
 */
+
+    /**
+     * 楼主工具条
+     * updateTime：2012-2-19
+     */
+    MonkeyModule('MonkeyPosterToolbar', {
+        html : '<span data="{1}" class="fleft">\
+                      &gt;&nbsp;<a href="javascript:void(0);" monkey-action="only" rel="nofollow" title="只看楼主的发言" style="display: inline;margin-left:0;">只看</a>\
+                      &gt;&nbsp;<a href="javascript:void(0);" monkey-action="highlight" rel="nofollow" title="高亮楼主的所有发言" style="display: inline;margin-left:0;">高亮</a>\
+                      &gt;&nbsp;<a href="javascript:void(0);" monkey-action="ignore" rel="nofollow" title="忽略楼主的所有发言" style="display: inline;margin-left:0;">忽略</a>\
+                      &gt;&nbsp;<a href="javascript:void(0);" monkey-action="reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">还原</a>\
+                  </span>',
+
+        filter : /www.douban.com\/group\/topic\/\d+/,
+
+        fit : function() {
+            //.test(MonkeyBean.path)
+        },
+
+        el : [$('div.topic-doc a')[0], $('div.topic-opt')],  //第一个包含了楼主的ID，第二个是插入工具条的位置
+
+        load : function() {
+            var posterId = this.el[0].href.replace('http://www.douban.com/people/', '').split('/')[0];
+            log('楼主ID=' + posterId);
+            this.set('posterId', posterId);
+            this.render();
+        },
+
+        render : function() {
+            this.el[1] && (this.el[1].append(this.html.replace('{1}', this.get('posterId'))));
+            log(this.el[1]);
+        }
+    });
+
+    /**
+     * 猴子回复增强模块，适用于小组回复，书籍影视评论等，功能包括楼层数显示。
+     * updateTime : 2012-2-19
+     */
+    MonkeyModule('MonkeyComment', {
+        filter : /www.douban.com\/group\/topic\/\d+/,
+
+        css : '.Monkey-floor{ float:right; margin-right:5px;}',
+
+        el : [$('.topic-reply'), $('.paginator .thispage')],  //第一个为小组回复，最后一个是当前页数
+
+        load : function() {
+            //楼层数。一般来说，多页的链接后面都有一个start参数，表示这页的楼层是从多少开始的。但这个参数并不可靠，考虑分析class为paginator的DIV，里面的a标签更可靠些。
+            //小组的回复区域：class为topic-reply的UL，影视书籍的回复：ID为comments的DIV
+            //分页栏：class为paginator的DIV，当前页码：class为thispage的span
+            var currentPage = this.el[1];
+            this.set({
+                'start' : +(query()['start']) || (currentPage && typeof !isNaN(+(currentPage.textContent)) && 100 * (+(currentPage.textContent) - 1)) || 0
+            })
+
+            var monkeySelector = {
+                'group' : {  //小组
+                    'posterUrl' : 'div.topic-doc a',   //楼主的ID藏在这个URL里
+                    'comment' : '.topic-reply',        //留言外层元素
+                    'commentItems' : 'li'
+                },
+
+                'entertain' : {  //书籍影音
+                    'posterUrl' : '',
+                    'comment' : '#comments',
+                    'commentItems' : 'span.wrap h3'
+                },
+
+                'note' : {      //日志
+                    'commentItems' : '.comment-item'
+                }
+            };
+
+
+            var reply = nuts.query('.topic-reply'),
+                comments = nuts.query('#comments'),
+                fragment = document.createDocumentFragment(),
+                items,
+                tmp,
+                len,
+                breaks,
+                userId,
+                type,
+                i = 0;
+
+            pageParam.floorStart = start;
+            type = (reply && 'group') || (comments && 'entertain');
+            //TODO：以下内容待重构
+            if(reply) {
+                pageParam.floor = items = nuts.queryAll(monkeySelector[type]['commentItems'], reply);
+                len = items.length;
+                if(len < 1) return;
+
+                this.posterToolbar(type);
+
+                for(; i<len; i++) {
+                    tmp = nuts.query('h4', items[i]);
+                    tmp.innerHTML += '<span class="_monkey_floor">' + (start + i + 1) + '楼</span>';
+                    userId = nuts.query('a', tmp).href.replace('http://www.douban.com/people/', '').split('/')[0];
+                    items[i].setAttribute('monkey_data', userId);
+                    nuts.query('div.operation_div', items[i]).innerHTML += monkeyMirror.commentToolbar.replace('{1}', userId);
+                }
+            } else if(comments) {
+                pageParam.floor = items = nuts.queryAll(monkeySelector[type]['commentItems'], comments);  //书籍影音页面
+                if(items.length > 0) {
+                    breaks = nuts.queryAll('br', comments);
+                    len = items.length;
+                    if(len < 1) return;
+                    for(; i<10; i++) {
+                        userId = nuts.query('a', items[i]).textContent;
+                        fragment.innerHTML = monkeyMirror.commentToolbar.replace('{1}', userId);
+                        //log(fragment.innerHTML);
+                        items[i].setAttribute('monkey_data', userId);
+                        items[i].innerHTML += '<span class="_monkey_floor">' + (start + i + 1) + '楼</span>';
+                        breaks[i].parentNode.insertBefore(fragment, breaks[i]);
+                    }
+                } else {
+                    //日志页面留言
+                    pageParam.floor = items = nuts.queryAll(monkeySelector[type]['commentItems']);
+                    len = items.length;
+                    if(len < 1) return;
+
+                    nuts.query('div.note-ft').innerHTML += monkeyMirror.postStarterToolbar.replace('{1}', nuts.query('#db-usr-profile a').href.replace('http://www.douban.com/people/', '').split('/')[0]);
+
+                    for(; i<len; i++) {
+                        tmp = nuts.query('div.author', items[i]);
+                        userId = nuts.query('a', tmp).textContent;
+                        items[i].setAttribute('monkey_data', userId);
+                        tmp.innerHTML += '<span class="_monkey_floor">' + (start + i + 1) + '楼</span>';
+                        nuts.query('div.group_banned', items[i]).innerHTML += monkeyMirror.commentToolbar.replace('{1}', userId);
+                    }
+                }
+
+            }
+            //注册工具事件
+            this.initToolbarEvent();
+        },
+
+        render : function() {
+            GM_addStyle(this.css);
+
+            //这里注册的事件同样适用于楼主工具条。
+            var that = this;
+            $(document.body).delegate('a[monkey-action]', 'click', function() {
+                var actionName = this.getAttribute('monkey-action');
+                log(this.parentNode.getAttribute('data'));
+                actionName && monkeyCommentToolbox[actionName] && monkeyCommentToolbox[actionName](this.parentNode.getAttribute('data'), this);
+            })
+        }
+    });
+
 /*********************************Module end**************************************************************/
 
     var userName = MonkeyBean.get(cName, ''),
@@ -669,13 +904,6 @@ typeof Updater != 'undefined' && new Updater({
                               <a href="javascript:void(0);" class="monkey-ignore" rel="nofollow" title="忽略该用户的所有发言" style="display: inline;margin-left:0;">略</a>\
                               <a href="javascript:void(0);" class="monkey-reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">原</a>\
                           </span>',
-        //楼主工具条
-        'postStarterToolbar' : '<span data="{1}" class="fleft">\
-                                  &gt;&nbsp;<a href="javascript:void(0);" class="monkey-only" rel="nofollow" title="只看楼主的发言" style="display: inline;margin-left:0;">只看</a>\
-                                  &gt;&nbsp;<a href="javascript:void(0);" class="monkey-highlight" rel="nofollow" title="高亮楼主的所有发言" style="display: inline;margin-left:0;">高亮</a>\
-                                  &gt;&nbsp;<a href="javascript:void(0);" class="monkey-ignore" rel="nofollow" title="忽略楼主的所有发言" style="display: inline;margin-left:0;">忽略</a>\
-                                  &gt;&nbsp;<a href="javascript:void(0);" class="monkey-reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">还原</a>\
-                              </span>',
 
         'replyBox' : '<form name="comment_form" method="post" action="add_comment">\
                         <div style="display: none;">\
@@ -703,205 +931,6 @@ typeof Updater != 'undefined' && new Updater({
                         </div>'
     };
 /**
-
-
-    var monkeySelector = {
-        'group' : {  //小组
-            'posterUrl' : 'div.topic-doc a',   //楼主的ID藏在这个URL里
-            'comment' : '.topic-reply',        //留言外层元素
-            'commentItems' : 'li'
-        },
-
-        'entertain' : {  //书籍影音
-            'posterUrl' : '',
-            'comment' : '#comments',
-            'commentItems' : 'span.wrap h3'
-        },
-
-        'note' : {      //日志
-            'commentItems' : '.comment-item'
-        }
-    };
-
-    var monkeyCommentToolbox = {
-        //快捷回复
-        reply : function(data, el) {
-            log('reply=' + data);
-        },
-        //引用用户发言
-        quote : function(data) {
-            log('quote');
-        },
-        //只看该用户发言
-        only : function(data) {
-            var items = this.cache || (this.cache = nuts.queryAll('[monkey_data]')),
-                len = items.length,
-                i = 0;
-            if(len > 0) {
-                while(len--) {
-                    items[len].getAttribute('monkey_data') != data && hide(items[len]);
-                }
-            }
-        },
-        //高亮该用户所有发言
-        highlight : function(data) {
-            var items = nuts.queryAll('[monkey_data=' + data + ']'),
-                len = items.length,
-                i = 0;
-            //这里的this是monkeyComment.toolRel，但是不影响操作~
-            this.clicked = !this.clicked;
-            log(len);
-            if(len > 0) {
-                if(this.clicked) {
-                    while(len--) {
-                        css(items[len], 'backgroundColor', cHighLightColor);
-                    }
-                } else {
-                    while(len--) {
-                        css(items[len], 'backgroundColor', cBlankStr);
-                    }
-                }
-            }
-        },
-        //忽略该用户所有发言
-        ignore : function(data) {
-            var items = nuts.queryAll('[monkey_data=' + data + ']'),
-                len = items.length,
-                i = 0;
-            if(len > 0) {
-                while(len--) {
-                    hide(items[len]);
-                }
-            }
-        },
-        //还原为原始状态
-        reset : function(data) {
-            var items = this.cache || nuts.queryAll('[monkey_data]'),
-                len = items.length,
-                i = 0;
-            this.clicked = false;  //"高亮"里需要这个参数
-            if(len > 0) {
-                while(len--) {
-                    show(items[len]);
-                    css(items[len], 'backgroundColor', cBlankStr);
-                }
-            }
-        }
-    };
-
-    //猴子回复增强模块，适用于小组回复，书籍影视评论等，功能包括楼层数显示。
-    var monkeyComment = new MonkeyModule('comment', {
-        on : false, //是否开启
-        css : '._monkey_floor{ float:right; margin-right:5px;}',
-        toolRel : {
-            'monkey-reply' : monkeyCommentToolbox.reply,
-            'monkey-quote' : monkeyCommentToolbox.quote,
-            'monkey-only' : monkeyCommentToolbox.only,
-            'monkey-highlight' : monkeyCommentToolbox.highlight,
-            'monkey-ignore' : monkeyCommentToolbox.ignore,
-            'monkey-reset' : monkeyCommentToolbox.reset
-        },
-
-        initToolbarEvent : function() {
-            var that = this;
-            delegate(document.body, 'a', 'click', function() {
-                var className = this.className;
-                if(className && that.toolRel[className]) that.toolRel[className](this.parentNode.getAttribute('data'), this);
-            })
-        },
-
-        load : function() {
-            //log(this.name + ' 准备加载！');
-
-            GM_addStyle(this.css);
-
-            //楼层数。一般来说，多页的链接后面都有一个start参数，表示这页的楼层是从多少开始的。但这个参数并不可靠，考虑分析class为paginator的DIV，里面的a标签更可靠些。
-            //小组的回复区域：class为topic-reply的UL，影视书籍的回复：ID为comments的DIV
-            //分页栏：class为paginator的DIV，当前页码：class为thispage的span
-            var reply = nuts.query('.topic-reply'),
-                comments = nuts.query('#comments'),
-                currentPage = nuts.query('.paginator .thispage'),
-                start = +(query()['start']) || (currentPage && typeof !isNaN(+(currentPage.textContent)) && 100 * (+(currentPage.textContent) - 1)) || 0,
-                fragment = document.createDocumentFragment(),
-                items,
-                tmp,
-                len,
-                breaks,
-                userId,
-                type,
-                i = 0;
-
-            pageParam.floorStart = start;
-            type = (reply && 'group') || (comments && 'entertain');
-            //TODO：以下内容待重构
-            if(reply) {
-                pageParam.floor = items = nuts.queryAll(monkeySelector[type]['commentItems'], reply);
-                len = items.length;
-                if(len < 1) return;
-
-                this.posterToolbar(type);
-
-                for(; i<len; i++) {
-                    tmp = nuts.query('h4', items[i]);
-                    tmp.innerHTML += '<span class="_monkey_floor">' + (start + i + 1) + '楼</span>';
-                    userId = nuts.query('a', tmp).href.replace('http://www.douban.com/people/', '').split('/')[0];
-                    items[i].setAttribute('monkey_data', userId);
-                    nuts.query('div.operation_div', items[i]).innerHTML += monkeyMirror.commentToolbar.replace('{1}', userId);
-                }
-            } else if(comments) {
-                pageParam.floor = items = nuts.queryAll(monkeySelector[type]['commentItems'], comments);  //书籍影音页面
-                if(items.length > 0) {
-                    breaks = nuts.queryAll('br', comments);
-                    len = items.length;
-                    if(len < 1) return;
-                    for(; i<10; i++) {
-                        userId = nuts.query('a', items[i]).textContent;
-                        fragment.innerHTML = monkeyMirror.commentToolbar.replace('{1}', userId);
-                        //log(fragment.innerHTML);
-                        items[i].setAttribute('monkey_data', userId);
-                        items[i].innerHTML += '<span class="_monkey_floor">' + (start + i + 1) + '楼</span>';
-                        breaks[i].parentNode.insertBefore(fragment, breaks[i]);
-                    }
-                } else {
-                    //日志页面留言
-                    pageParam.floor = items = nuts.queryAll(monkeySelector[type]['commentItems']);
-                    len = items.length;
-                    if(len < 1) return;
-
-                    nuts.query('div.note-ft').innerHTML += monkeyMirror.postStarterToolbar.replace('{1}', nuts.query('#db-usr-profile a').href.replace('http://www.douban.com/people/', '').split('/')[0]);
-
-                    for(; i<len; i++) {
-                        tmp = nuts.query('div.author', items[i]);
-                        userId = nuts.query('a', tmp).textContent;
-                        items[i].setAttribute('monkey_data', userId);
-                        tmp.innerHTML += '<span class="_monkey_floor">' + (start + i + 1) + '楼</span>';
-                        nuts.query('div.group_banned', items[i]).innerHTML += monkeyMirror.commentToolbar.replace('{1}', userId);
-                    }
-                }
-
-            }
-            //注册工具事件
-            this.initToolbarEvent();
-        },
-
-        posterToolbar : function(type) {
-            var posterUrl,
-                posterId,
-                toolbarPos;
-
-            switch(type) {
-                case 'group' :
-                    posterUrl = nuts.query(monkeySelector[type]['posterUrl']);
-                    posterUrl && (postStarterId = posterUrl.href.replace('http://www.douban.com/people/', '').split('/')[0]);
-
-                    toolbarPos = nuts.query('div.topic-opt');
-                    toolbarPos && (toolbarPos.innerHTML += monkeyMirror.postStarterToolbar.replace('{1}', postStarterId));
-                    break;
-            }
-
-        }
-    });
-
     //猴子浮动工具条，整合多个工具，例如楼层跳转等
     var monkeyFloatToolbar = new MonkeyModule('floatToolbar', {
         css : '',
