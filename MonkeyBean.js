@@ -23,6 +23,7 @@ typeof Updater != 'undefined' && new Updater({
     /*-------------------Begin--------------------*/
     var cName = 'monkey.username',
         cLocation = 'monkey.location',
+        moduleNamePrefix = 'MonkeyBean.Module.',
         apiCount = 'MonkeyBean.API.count',
         apiLastTime = 'MonkeyBean.API.lastTime',
         interval = 60000,  //请求api的间隔
@@ -205,6 +206,10 @@ typeof Updater != 'undefined' && new Updater({
         del : function(key) {
             GM_deletetValue(key);
         },
+        //MonkeyBean初始化方法
+        init : function() {
+            this.trigger('load');
+        },
 
         //是否登录
         isLogin : function() {
@@ -234,7 +239,7 @@ typeof Updater != 'undefined' && new Updater({
                 //log(moduleTree);
                 for(m in moduleTree) {
                     if(hasOwn.call(moduleTree, m)) {
-                        // log('------' + m + '----' + moduleTree[m]);
+                         log('------' + m + '----' + moduleTree[m].filter);
                         //MonkeyBean.get('MonkeyBean.' + m, false) 配置
                         moduleTree[m].filter.test(MonkeyBean.path) && moduleTree[m].load();
                     }
@@ -245,91 +250,125 @@ typeof Updater != 'undefined' && new Updater({
                 register : register,
                 turnOn : turnOn
             }
-        })()
+        })(),
+
+        //UI组件
+        MonkeyBeanPeal : {
+            'monkeyTip' : function(pos, content) {
+                var tip = this.tip || createTip();
+                tip.innerHTML = monkeyMirror.monkeyTip.replace('{1}', content);
+                hide(tip);
+                css(tip, 'left', pos.left + 'px');
+                css(tip, 'top', pos.top + 'px');
+                show(tip);
+
+                function createTip() {
+                    var css = '#_monkey_tip{background-color: #F9EDBE;border: 1px solid #F0C36D;-webkit-border-radius: 2px;-webkit-box-shadow: 0 2px 4px rgba(0,0,0,0.2);\
+                         border-radius: 2px;box-shadow: 0 2px 4px rgba(0,0,0,0.2);font-size: 13px;line-height: 18px;padding: 16px; position: absolute;\
+                         vertical-align: middle;width: 160px;z-index: 6000;border-image: initial;display:none;}\
+                         ._monkey_arrow_inner {border-top: 6px solid #FFFFFF;top: 43px; z-index: 5;}\
+                         ._monkey_arrow_outer {border-top: 6px solid #666666;z-index: 4;}',
+                        tip;
+                    GM_addStyle(css);
+                    tip = div.cloneNode(true);
+                    tip.id = '_monkey_tip';
+                    //tip.innerHTML = monkeyMirror.monkeyTip;
+                    document.body.appendChild(tip);
+                    delegate(tip,'a', 'click', function() {
+                        hide(tip);
+                    })
+                    return peal.tip = tip;
+                }
+            },
+
+            'monkeyReplyBox' : function() {
+                var box = this.box || createReplyBox();
+                show(box);
+
+                function createReplyBox() {
+                    var css = '#_monkey_replybox{position:fixed;top:25%;width:100px;height:50px;scroll:auto-x;right:0;border:1px solid #f9edbe;}',
+                        box = div.cloneNode(true);
+
+                    GM_addStyle(css);
+                    box.id = '_monkey_replybox';
+                    box.innerHTML = monkeyMirror.replyBox;
+                    document.body.appendChild(box);
+                    return peal.box = box;
+                }
+            }
+        }
     };
     var log = MonkeyBean.log;
 
-    //猴骨~MVC~模仿backbone,http://backbonejs.org
-    var MonkeyBone = {
-        Event : {
-            subscribers : {
-            },
+    var cusEvents = {
+        subscribers : {
+        },
 
-            bind : function(type, fn, context) {
-                type = type || 'any';
-                fn = $.isFunction(fn) ? fn : context[fn];
+        bind : function(type, fn, context) {
+            type = type || 'any';
+            fn = $.isFunction(fn) ? fn : context[fn];
 
-                if(typeof this.subscribers[type] === 'undefined') {
-                    this.subscribers[type] = [];
-                }
-                this.subscribers[type].push({
-                    fn : fn,
-                    context : context || this
-                })
-            },
+            if(typeof this.subscribers[type] === 'undefined') {
+                this.subscribers[type] = [];
+            }
+            this.subscribers[type].push({
+                fn : fn,
+                context : context || this
+            })
+        },
 
-            unbind : function(type, fn, context) {
-                this.visitSubscribers('unbind', type, fn, context);
-            },
+        unbind : function(type, fn, context) {
+            this.visitSubscribers('unbind', type, fn, context);
+        },
 
-            trigger : function(type, publication) {
-                this.visitSubscribers('trigger', type, publication);
-            },
+        trigger : function(type, publication) {
+            this.visitSubscribers('trigger', type, publication);
+        },
 
-            visitSubscribers : function(action, type, arg, context) {
-                var pubtype = type || 'any',
-                    subscribers = this.subscribers[pubtype],
-                    i = 0,
-                    max = subscribers ? subscribers.length : 0;
+        visitSubscribers : function(action, type, arg, context) {
+            var pubtype = type || 'any',
+                subscribers = this.subscribers[pubtype],
+                i = 0,
+                max = subscribers ? subscribers.length : 0;
 
-                for(; i < max; i += 1) {
-                    if(action === 'trigger') {
-                        subscribers[i].fn.call(subscribers[i].context, arg);
-                    } else {
-                        if(subscribers[i].fn === arg && subscribers[i].context === context) {
-                            subscribers.splice(i, 1);
-                        }
+            for(; i < max; i += 1) {
+                if(action === 'trigger') {
+                    subscribers[i].fn.call(subscribers[i].context, arg);
+                } else {
+                    if(subscribers[i].fn === arg && subscribers[i].context === context) {
+                        subscribers.splice(i, 1);
                     }
                 }
             }
-        },
-
-        Model : function(attributes, options) {
-            var defaults = this.defaults;
-            attributes || (attributes = {});
-            if(defaults) {
-                attributes = $.extend({}, defaults, attributes);
-            }
-            log('before');
-            log(attributes);
-
-            this.attributes = attributes;
-            this.set(attributes);
-            log('Model initialize');
-            log(this);
-            this.initialize.apply(this, arguments);
-        },
-
-        View : function(options) {
-            log(options);
-            this._configure(options || {});
-            this._ensureElement();
-            this.initialize.apply(this, arguments);
-            this.delegateEvents();
         }
     };
 
-    $.extend(MonkeyBone.Model.prototype, MonkeyBone.Event, {
-        initialize : function() {
-            return this;
+    var MonkeyModule = function(name, method) {
+        if(this.constructor != MonkeyModule) {
+            return new MonkeyModule(name, method);
+        }
+        this.guid = guid++;
+        this.name = name;
+        $.extend(this, method);
+        //this.on = MonkeyBean.get(moduleNamePrefix + name);  //是否启动
+        this.on = true;
+        this.init();
+    };
+
+    MonkeyModule.prototype = {
+        constructor : MonkeyModule,
+
+        init : function() {
+            MonkeyBean.MonkeyModuleManager.register(this.name, this);
+            MonkeyBean.bind('load', this.load, this);
         },
-        // get Attribute from attributes
-        get : function(attr) {
-            return this.attributes[attr] || {};
+
+        get : function(name) {
+            return this.attr[name] || '';
         },
 
         set : function(key, value) {
-            var attrs, attr, val;
+            var attrs, attr;
             if($.isPlainObject(key) || key == null) {
                 attrs = key;
             } else {
@@ -337,204 +376,89 @@ typeof Updater != 'undefined' && new Updater({
                 attrs[key] = value;
             }
             for(attr in attrs) {
-                this.attributes[attr] = attrs[attr]
+                this.attr[attr] = attrs[attr]
             }
-            var alreadySetting = this._setting;
-            this._setting = true;
-            log('isChanged ? ' + alreadySetting);
-            if(alreadySetting) {
-                this.trigger('change');
-                this._setting = false;
-            }
-            return this;
+            this.trigger('change');  //属性更改会触发change事件
+        },
+
+        load : function() {
+            //log(this.name + ' 准备加载！');
+        },
+
+        toString : function() {
+            return 'This module\'s name is:' + this.name;
         }
-    });
-
-    $.extend(MonkeyBone.View.prototype, MonkeyBone.Event, {
-        render : function() {},
-        initialize : function() {
-            return this;
-        },
-
-        // Set callbacks, where `this.events` is a hash of
-        //
-        // *{"event selector": "callback"}*
-        //
-        //     {
-        //       'mousedown .title':  'edit',
-        //       'click .button':     'save'
-        //       'click .open':       function(e) { ... }
-        //     }
-        //
-        // pairs. Callbacks will be bound to the view, with `this` set properly.
-        // Uses event delegation for efficiency.
-        // Omitting the selector binds the event to `this.el`.
-        // This only works for delegate-able events: not `focus`, `blur`, and
-        // not `change`, `submit`, and `reset` in Internet Explorer.
-        delegateEvents : function(events) {
-            var key, method, match, eventName, selector;
-            if(!(events || (events = this.events))) return;
-            for(key in events) {
-                method = events[key];
-                if(!$.isFunction()) method = this[events[key]];
-                if(!method) return;
-                match = key.match(eventSplitter);
-                eventName = match[1];
-                selector = match[2];
-                method = $.bind(method, this);
-                if (selector === '') {
-                    this.$el.bind(eventName, method);
-                } else {
-                    this.$el.delegate(selector, eventName, method);
-                }
-            }
-        },
-
-        // Change the view's element (`this.el` property), including event
-        // re-delegation.
-        setElement: function(element, delegate) {
-            this.$el = $(element);
-            this.el = this.$el[0];
-            if (delegate !== false) this.delegateEvents();
-            return this;
-        },
-
-        // For small amounts of DOM Elements, where a full-blown template isn't
-        // needed, use **make** to manufacture elements, one at a time.
-        //
-        //     var el = this.make('li', {'class': 'row'}, this.model.escape('title'));
-        //
-        make: function(tagName, attributes, content) {
-            var el = document.createElement(tagName);
-            if (attributes) $(el).attr(attributes);
-            if (content) $(el).html(content);
-            return el;
-        },
-
-        // Performs the initial configuration of a View with a set of options.
-        // Keys with special meaning *(model, collection, id, className)*, are
-        // attached directly to the view.
-        _configure: function(options) {
-            if (this.options) options = $.extend({}, this.options, options);
-            for (var i = 0, l = viewOptions.length; i < l; i++) {
-                var attr = viewOptions[i];
-                if (options[attr]) this[attr] = options[attr];
-            }
-            this.options = options;
-        },
-
-        // Ensure that the View has a DOM element to render into.
-        // If `this.el` is a string, pass it through `$()`, take the first
-        // matching element, and re-assign it to `el`. Otherwise, create
-        // an element from the `id`, `className` and `tagName` properties.
-        _ensureElement: function() {
-            if (!this.el) {
-                var attrs = this.attributes || {};
-                if (this.id) attrs.id = this.id;
-                if (this.className) attrs['class'] = this.className;
-                this.setElement(this.make(this.tagName, attrs), false);
-            } else {
-                this.setElement(this.el, false);
-            }
-        }
-    });
-
-    // this method is from Backbone.js
-    var inherits = function(parent, protoProps, staticProps) {
-        var child;
-
-        // The constructor function for the new subclass is either defined by you
-        // (the "constructor" property in your `extend` definition), or defaulted
-        // by us to simply call the parent's constructor.
-        if (protoProps && protoProps.hasOwnProperty('constructor')) {
-            child = protoProps.constructor;
-        } else {
-            child = function(){ parent.apply(this, arguments); };
-        }
-
-        // Inherit class (static) properties from parent.
-        $.extend(child, parent);
-
-        // Set the prototype chain to inherit from `parent`, without calling
-        // `parent`'s constructor function.
-        ctor.prototype = parent.prototype;
-        child.prototype = new ctor();
-
-        // Add prototype properties (instance properties) to the subclass,
-        // if supplied.
-        if (protoProps) $.extend(child.prototype, protoProps);
-
-        // Add static properties to the constructor function, if supplied.
-        if (staticProps) $.extend(child, staticProps);
-
-        // Correctly set child's `prototype.constructor`.
-        child.prototype.constructor = child;
-
-        // Set a convenience property in case the parent's prototype is needed later.
-        child.__super__ = parent.prototype;
-
-        return child;
     };
 
-    var extend = function (protoProps, classProps) {
-        var child = inherits(this, protoProps, classProps);
-        child.extend = this.extend;
-        return child;
-    };
+    $.extend(MonkeyBean, cusEvents);
+    $.extend(MonkeyModule.prototype, cusEvents);
 
-    // Set up inheritance for the model, collection, and view.
-    MonkeyBone.Model.extend = MonkeyBone.View.extend = extend;
+    /*********************************UI begin**************************************************************/
+    /**
+     * 提示便签
+     */
+    MonkeyModule('tip', {
+        css : '#MonkeyUI-tip{background-color: #F9EDBE;border: 1px solid #F0C36D;-webkit-border-radius: 2px;-webkit-box-shadow: 0 2px 4px rgba(0,0,0,0.2);\
+             border-radius: 2px;box-shadow: 0 2px 4px rgba(0,0,0,0.2);font-size: 13px;line-height: 18px;padding: 16px; position: absolute;\
+             vertical-align: middle;width: 160px;z-index: 6000;border-image: initial;display:none;}\
+             ._monkey_arrow_inner {border-top: 6px solid #FFFFFF;top: 43px; z-index: 5;}\
+             ._monkey_arrow_outer {border-top: 6px solid #666666;z-index: 4;}',
+
+        html : '<div id="MonkeyUI-tip">\
+                    <p></p>\
+                    <a href="javascript:void(0)" style="position:relative;left:45%;" action-type="close" >关闭</a>\
+                </div>',
+
+        filter : /.*/,
+
+        load : function() {
+            this.render();
+        },
+
+        render : function() {
+            var that = this;
+            this.el = $(this.html);
+            document.body.appendChild(this.el[0]);
+            GM_addStyle(this.css);
+
+            this.el.delegate('a', 'click', function() {
+                that.hide();
+            });
+        },
+
+        show : function(msg, pos) {
+            log(this.el.find('p'));
+            this.el.find('p').html(msg);
+            this.el.css({
+                'left' : pos.left + 'px',
+                'top' : pos.top + 'px'
+            })
+            this.el.fadeIn();
+        },
+
+        hide : function() {
+            this.el.fadeOut();
+        }
+
+    })
+    /*********************************UI end**************************************************************/
+
+    /***********************************************************************************************/
+    /***********************************************************************************************/
 
     /**
      * 天气模块
      */
-    MonkeyBean.MonkeyModuleManager.register('MonkeyWeather', (function() {
-        var monkeyWeatherModel = MonkeyBone.Model.extend({
-            defaults : {
-                url : 'http://www.google.com/ig/api?weather={1}&hl=zh-cn',
-                condition : '',
-                icon : '',
-                place : '',
-                temp : ''
-            },
+    MonkeyModule('MonkeyWeather', {
+        attr : {
+            url : 'http://www.google.com/ig/api?weather={1}&hl=zh-cn'
+        },
 
-            initialize : function() {
-                log('weather initialize');
-                this.fetch();
-            },
+        filter : /www.douban.com\/(mine|(people\/.+\/)$)/,
 
-            fetch : function() {
-                var place = $('.user-info > a'),
-                    a,
-                    that = this;
-                if(!place || !$.trim(place.text())) return;
-                a = place.attr('href').match(/http:\/\/(.*)\.douban\.com/);
-                place = place.text();
+        css : '.monkeybean-weather{position:relative;top:10px;}',
 
-                GM_xmlhttpRequest({
-                    method : 'GET',
-                    url : this.get('url').replace('{1}', RegExp.$1),
-                    headers :  {
-                        Accept: 'text/xml'
-                    },
-                    onload : function(resp) {
-                        xml.parse(resp.responseText);
-                        var current = xml.tag('current_conditions');
-                        that.set({
-                            condition : xml.tag('condition', current).data,
-                            icon : xml.tag('icon', current).data,
-                            temp : xml.tag('temp_c', current).data,
-                            place : place
-                        });
-                    }
-                });
-            }
-        });
-
-        var monkeyWeahterView = MonkeyBone.View.extend({
-            css : '.monkeybean-weather{position:relative;top:10px;}',
-
-            html : '<div style="float:left;margin-right:10px;">\
+        html : '<div style="float:left;margin-right:10px;">\
                     <img height="40" width="40" alt="{1}" src="http://g0.gstatic.com{2}">\
                     <br>\
                 </div>\
@@ -543,131 +467,131 @@ typeof Updater != 'undefined' && new Updater({
                 <div style="float:">当前：&nbsp;{1}\
                 </div>',
 
-            el : $('#profile'),
+        el : $('#profile'),
 
-            initialize : function() {
-                var model = new monkeyWeatherModel();
-                model.bind('change', this.render, this);
-                this.model = model;
-            },
+        load : function() {
+            //console.dir(this);
+            this.bind('change', this.render, this);
+            this.fetch();
+        },
 
-            render : function() {
-                if(!this.el) return;
-                var container = div.cloneNode(true);
-                container.className = 'monkeybean-weather';
-                container.innerHTML = this.html.replace(/\{1\}/g, this.model.get('condition'))
-                    .replace('{2}', this.model.get('icon'))
-                    .replace('{3}', this.model.get('place'))
-                    .replace('{4}', this.model.get('temp'));
-                $(container).insertBefore(this.el);
-            }
-        });
+        fetch : function() {
+            var place = $('.user-info > a'),
+                a,
+                that = this;
+            if(!place || !$.trim(place.text())) return;
+            a = place.attr('href').match(/http:\/\/(.*)\.douban\.com/);
+            place = place.text();
 
-        return {
-            model : monkeyWeatherModel,
-            view : monkeyWeahterView,
-            filter : /www.douban.com\/(mine|(people\/.+\/)$)/,
-            load : function() {
-                new monkeyWeahterView();
-            }
+            GM_xmlhttpRequest({
+                method : 'GET',
+                url : this.get('url').replace('{1}', RegExp.$1),
+                headers :  {
+                    Accept: 'text/xml'
+                },
+                onload : function(resp) {
+                    xml.parse(resp.responseText);
+                    var current = xml.tag('current_conditions');
+                    that.set({
+                        condition : xml.tag('condition', current).data,
+                        icon : xml.tag('icon', current).data,
+                        temp : xml.tag('temp_c', current).data,
+                        place : place
+                    });
+                }
+            });
+        },
+
+        render : function() {
+            if(!this.el) return;
+            var container = div.cloneNode(true);
+            container.className = 'monkeybean-weather';
+            container.innerHTML = this.html.replace(/\{1\}/g, this.get('condition'))
+                                            .replace('{2}', this.get('icon'))
+                                            .replace('{3}', this.get('place'))
+                                            .replace('{4}', this.get('temp'));
+            $(container).insertBefore(this.el);
         }
-    }()));
+    });
 
     /**
      * 留言板，增加回复功能
      * 适用页面：个人主页与留言板页
      */
     //TODO:尚未完成
-    MonkeyBean.MonkeyModuleManager.register('MonkeyMessageBoard', (function() {
-        var el = $('ul.mbt');
+    MonkeyModule('MonkeyMessageBoard', {
+        //TODO：<span class="gact">
+        html : {
+            'doumail' : '&nbsp; &nbsp; <a href="/doumail/write?to={1}">回豆邮</a>',
+            'reply' : '&nbsp; &nbsp; <a href="JavaScript:void(0);" monkey-data="{1}[-]{2}" title="回复到对方留言板">回复</a>',
+            'form' : '<form style="margin-bottom:12px" method="post" name="bpform">\
+                            <div style="display:none;"><input type="hidden" value="' + MonkeyBean.getCk() + '" name="ck"></div>\
+                            <textarea style="width:97%;height:50px;margin-bottom:5px" name="bp_text"></textarea>\
+                            <input type="submit" value=" 留言 " name="bp_submit">\
+                            <a href="javascript:void(0);" id="monkey_resetBtn" style="float:right;display:none;">点击恢复原状</a>\
+                        </form>'
+        },
 
-        var monkeyMessageBoardToolView = MonkeyBone.View.extend({
-            //TODO：<span class="gact">
-            html : {
-                'doumail' : '&nbsp; &nbsp; <a href="/doumail/write?to={1}">回豆邮</a>',
-                 'reply' : '&nbsp; &nbsp; <a href="JavaScript:void(0);" monkey-data="{1}[-]{2}" title="回复到对方留言板">回复</a>'
-            },
+        filter : /www.douban.com\/(people\/.+\/)(board)$/,
 
-            el : el,
+        el : $('ul.mbt'),
 
-            initialize : function() {
-                this.render();
-            },
+        load : function() {
 
-            render : function() {
-                if(!this.el || (this.el = this.el.querySelectorAll('li.mbtrdot')).length < 1) return;
-                var len = this.el.length,
-                    i = 0,
-                    that = this,
-                    id,
-                    nickName,
-                    tmp;
-                for(; i<len; i++) {
-                    tmp = this.el[i];
-                    var tempVar = tmp.getElementsByTagName('a')[0];
-                    nickName = tempVar.innerHTML;
-                    tempVar.href.match(people);
-                    id = RegExp.$1;
-                    if(id != 'sunnylost') {
-                        tmp = tmp.getElementsByTagName('span');
-                        if(tmp.length == 1) {
-                            tmp[0].parentNode.innerHTML += '<br/><br/><span class="gact">' + (this.html['doumail'] + this.html['reply']).replace(/\{1\}/g, id).replace('{2}', nickName) + '</span>';
-                        } else if(tmp.length == 2) {
-                            tmp[1].innerHTML += this.html['reply'].replace(/\{1\}/g, id).replace('{2}', nickName);
-                        }
+        },
 
+        render : function() {
+            this.form = $(this.html['form']);
+            this.form.insertBefore(this.el);
+            this.resetBtn = $('#monkey_resetBtn');
+            this.resetBtn.bind('click', $.proxy(this.reset, this));
+            this.bind('reply', this.reply, this);
+
+            if(!this.el || (this.el = this.el.querySelectorAll('li.mbtrdot')).length < 1) return;
+            var len = this.el.length,
+                i = 0,
+                that = this,
+                id,
+                nickName,
+                tmp;
+            for(; i<len; i++) {
+                tmp = this.el[i];
+                var tempVar = tmp.getElementsByTagName('a')[0];
+                nickName = tempVar.innerHTML;
+                tempVar.href.match(people);
+                id = RegExp.$1;
+                if(id != 'sunnylost') {
+                    tmp = tmp.getElementsByTagName('span');
+                    if(tmp.length == 1) {
+                        tmp[0].parentNode.innerHTML += '<br/><br/><span class="gact">' + (this.html['doumail'] + this.html['reply']).replace(/\{1\}/g, id).replace('{2}', nickName) + '</span>';
+                    } else if(tmp.length == 2) {
+                        tmp[1].innerHTML += this.html['reply'].replace(/\{1\}/g, id).replace('{2}', nickName);
                     }
+
                 }
-                el.delegate('a[monkey-data]', 'click', function() {
-                    that.trigger('reply', $(this).attr('monkey-data'));
-                });
             }
-        });
+            el.delegate('a[monkey-data]', 'click', function() {
+                that.trigger('reply', $(this).attr('monkey-data'));
+            });
+        },
 
-        var monkeyMessageBoardView = MonkeyBone.View.extend({
-            html : '<form style="margin-bottom:12px" method="post" name="bpform">\
-                        <div style="display:none;"><input type="hidden" value="' + MonkeyBean.getCk() + '" name="ck"></div>\
-                        <textarea style="width:97%;height:50px;margin-bottom:5px" name="bp_text"></textarea>\
-                        <input type="submit" value=" 留言 " name="bp_submit">\
-                        <a href="javascript:void(0);" id="monkey_resetBtn" style="float:right;display:none;">点击恢复原状</a>\
-                    </form>',
+        //TODO:点击回复按钮时，应该可以回复到对方留言板
+        reply : function(userMsg) {
+            var tmpArr = userMsg.split('[-]');
+            this.form.find('[type="submit"]').attr('value', '回复到的' + tmpArr[1] + '的留言板');
+            this.form.attr('action', 'http://www.douban.com/people/' + tmpArr[0] + '/board');
+            this.resetBtn.css('display', 'block');
+        },
 
-            el : el,
-
-            initialize : function(view) {
-                this.anotherView = view;
-                this.render();
-            },
-
-            render : function() {
-                this.form = $(this.html);
-                this.form.insertBefore(el);
-                this.resetBtn = $('#monkey_resetBtn');
-                this.resetBtn.bind('click', $.proxy(this.reset, this));
-                this.anotherView.bind('reply', this.reply, this);
-            },
-            //TODO:点击回复按钮时，应该可以回复到对方留言板
-            reply : function(userMsg) {
-                var tmpArr = userMsg.split('[-]');
-                this.form.find('[type="submit"]').attr('value', '回复到的' + tmpArr[1] + '的留言板');
-                this.form.attr('action', '/people/' + tmpArr[0] + '/board');
-                this.resetBtn.css('display', 'block');
-            },
-
-            reset : function() {
-                this.form.find('[type="submit"]').attr('value', '回复');
-                this.form.attr('action', '');
-                this.resetBtn.css('display', 'none');
-            }
-        });
-
-        return {
-            filter : /www.douban.com\/(people\/.+\/)(board)$/,
-            load : function() {
-                new monkeyMessageBoardView(new monkeyMessageBoardToolView());
-            }
+        reset : function() {
+            this.form.find('[type="submit"]').attr('value', '回复');
+            this.form.attr('action', '');
+            this.resetBtn.css('display', 'none');
         }
-    })());
+    });
+
+
+
 
     var userName = MonkeyBean.get(cName, ''),
         userLocation = MonkeyBean.get(cLocation, ''),
@@ -951,35 +875,6 @@ typeof Updater != 'undefined' && new Updater({
             turnOn : turnOn
         }
     })();
-
-    var MonkeyModule = function(name, method) {
-        if(this.constructor != MonkeyModule) {
-            return new MonkeyModule(name, method);
-        }
-        var that = this;
-        this.guid = guid++;
-        this.name = name;
-        this.filter = new RegExp('');
-        $.extend(this, method);
-        this.on = false;  //是否启动
-        that.init();
-    };
-
-    MonkeyModule.prototype = {
-        constructor : MonkeyModule,
-
-        init : function() {
-            monkeyModuleManager.register(this);
-        },
-
-        load : function() {
-            //log(this.name + ' 准备加载！');
-        },
-
-        toString : function() {
-            return 'This module\'s name is:' + this.name;
-        }
-    };
 
     //猴子导航栏——用于显示顶部导航栏的二级菜单
     var monkeyNav = new MonkeyModule('nav', {
@@ -1293,6 +1188,7 @@ typeof Updater != 'undefined' && new Updater({
 
     nuts.load();
     MonkeyBean.MonkeyModuleManager.turnOn();
+    MonkeyBean.init();
 
     log(((new Date()) - startTime)/1000 + '秒');
 })(window, unsafeWindow.$)
