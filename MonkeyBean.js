@@ -23,6 +23,7 @@ typeof Updater != 'undefined' && new Updater({
     /*-------------------Begin--------------------*/
     var cName = 'monkey.username',
         cLocation = 'monkey.location',
+        dataSpliter = '[-]',  //monkey-data中的分隔符
         moduleNamePrefix = 'MonkeyBean.Module.',
         apiCount = 'MonkeyBean.API.count',
         apiLastTime = 'MonkeyBean.API.lastTime',
@@ -44,6 +45,10 @@ typeof Updater != 'undefined' && new Updater({
         //豆瓣API
         api = {
             'people' : 'http://api.douban.com/people/{1}'  //用户信息
+        },
+        //快捷键对应的code
+        keyCode = {
+            'enter' : 13
         };
 
 
@@ -103,6 +108,12 @@ typeof Updater != 'undefined' && new Updater({
             tostring : function() {
                 return this.el || {};
             }
+        },
+        //增加快捷键
+        addHotKey : function(elem, key, fn) {
+            elem.addEventListener('keydown', function(e) {
+                fn();
+            });
         }
     };
 
@@ -173,11 +184,16 @@ typeof Updater != 'undefined' && new Updater({
         getCk : function() {
             return this.ck || (this.ck = cookie.get('ck'));
         },
-
+        //Mr.TM Tripple M;
         MonkeyModuleManager : (function() {
             var moduleTree = {},  //模块树，所有模块都生长在树上。
+                get,              //根据名字获得对应模块
                 turnOn,
                 register;
+
+            get = function(moduleName) {
+                return moduleTree[moduleName];
+            };
 
             register = function(moduleName, module) {
                 moduleTree[moduleName] = module;
@@ -191,18 +207,20 @@ typeof Updater != 'undefined' && new Updater({
                         tmpModule = moduleTree[m];
                          //log('------' + m + '----' + moduleTree[m].filter);
                         log(tmpModule.name + ' 加载~');
-                        tmpModule.fit() && (tmpModule.el && tmpModule.el.length > 0) && tmpModule.load();
+                        tmpModule.fit() && tmpModule.load();
                     }
                 }
             };
 
             return {
+                get : get,
                 register : register,
                 turnOn : turnOn
             }
         })()
     };
     var log = MonkeyBean.log;
+    MonkeyBean.TM = MonkeyBean.MonkeyModuleManager;
 
     log('---------' + MonkeyBean.userId());
 
@@ -265,7 +283,7 @@ typeof Updater != 'undefined' && new Updater({
         constructor : MonkeyModule,
 
         init : function() {
-            MonkeyBean.MonkeyModuleManager.register(this.name, this);
+            MonkeyBean.TM.register(this.name, this);
         },
 
         get : function(name) {
@@ -295,7 +313,7 @@ typeof Updater != 'undefined' && new Updater({
             return !$.isArray(this.filter) && (this.filter.test(MonkeyBean.path));
         },
 
-        //一个简单的模板方法
+        //TODO:一个简单的模板方法
         template : function(key, value) {
         },
 
@@ -310,6 +328,7 @@ typeof Updater != 'undefined' && new Updater({
     /*********************************UI begin**************************************************************/
     /**
      * 提示便签
+     * updateTime : 2012-2-19
      */
     MonkeyModule('tip', {
         css : '#MonkeyUI-tip{background-color: #F9EDBE;border: 1px solid #F0C36D;-webkit-border-radius: 2px;-webkit-box-shadow: 0 2px 4px rgba(0,0,0,0.2);\
@@ -354,14 +373,133 @@ typeof Updater != 'undefined' && new Updater({
             this.el.fadeOut();
         }
 
-    })
+    });
+
+    /**
+     * 回复框
+     * updateTime : 2012-2-19
+     */
+    MonkeyModule('reply', {
+        css : '#Monkey-ReplyForm{\
+                display : block;\
+                background: none repeat scroll 0 0 #FFFFFF;\
+                border: 1px solid #D8D8D8;\
+                box-shadow: 0 0 4px rgba(0, 0, 0, 0.23);\
+                height : 220px;\
+                width : 302px;\
+                position: fixed;\
+                right : 2px;\
+                top : 20%;\
+            }\
+            #Monkey-ReplyToolbox {\
+                position : absolute;\
+                margin-left : 15px;\
+                text-align : center;\
+                padding-bottom : 2px;\
+                left : 45px;\
+                bottom : 2px;\
+                height : 25px;\
+            }\
+            #Monkey-ReplyText {\
+                position : absolute;\
+                top : 2px;\
+                height : 150px;\
+                width : 99%;\
+                padding : 2px;\
+            }\
+            .Monkey-Button {\
+                -moz-border-bottom-colors: none;\
+                -moz-border-image: none;\
+                -moz-border-left-colors: none;\
+                -moz-border-right-colors: none;\
+                -moz-border-top-colors: none;\
+                background-color : #B2B2B2;\
+                border-color: #C9C9C9 #B2B2B2 #9A9A9A;\
+                border-left: 1px solid #B2B2B2;\
+                border-radius: 3px 3px 3px 3px;\
+                border-right: 1px solid #B2B2B2;\
+                border-style: solid;\
+                border-width: 1px;\
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);\
+                color: #333333;\
+                cursor: pointer;\
+                font-size: 11px;\
+                font-weight: bold;\
+                height: 25px;\
+                line-height: 11px;\
+                padding: 5px 10px 6px;\
+                text-align: center;\
+                text-shadow: 0 1px 1px #EEEEEE;\
+            }',
+
+        html : '<div id="Monkey-ReplyForm">\
+                    <form name="comment_form" method="post" action="add_comment">\
+                        <div style="display: none;">\
+                            <input name="ck" value="' + MonkeyBean.getCk() + '" type="hidden">\
+                        </div>\
+                        <div id="Monkey-ReplyText">\
+                            <textarea id="re_text" name="rv_comment" rows="10" cols="40">\
+                            </textarea>\
+                        </div>\
+                        <div id="Monkey-ReplyToolbox">\
+                            <input value="加上去" type="submit" monkey-action="submit" class="Monkey-Button">\
+                            <input value="清空" type="button" monkey-action="reset" class="Monkey-Button">\
+                            <input value="取消" type="button" monkey-action="cancel" class="Monkey-Button">\
+                        </div>\
+                    </form>\
+                </div>',
+
+        filter : /.*/,
+
+        load : function() {
+            log('loading reply');
+            this.render();
+        },
+
+        render : function() {
+            var that = this;
+            GM_addStyle(this.css);
+            this.form = $(this.html);
+            this.form.appendTo(document.body);
+            this.text = $('#Monkey-ReplyForm #re_text');
+            this.text.val('');  //默认光标会出现在textare的第一行正中间，手动清除一下
+            this.form.delegate('input[monkey-action]', 'click', function() {
+                that[this.getAttribute('monkey-action')]();
+            });
+        },
+
+        show : function() {
+            this.form.show();
+        },
+
+        submit : function() {
+            log('submit');
+        },
+        //清除回复框中的内容
+        reset : function() {
+            this.text.val('');
+            this.text.focus();
+        },
+        //隐藏回复框
+        cancel : function() {
+            this.reset();
+            this.form.hide();
+        },
+        //向文本框中输入内容
+        setContent : function(content) {
+            this.text.val(content);
+            this.text.focus();
+        }
+    });
     /*********************************UI end**************************************************************/
 
     /*********************************Common Function****************************************************************/
     var monkeyCommentToolbox = {
         //快捷回复
         reply : function(data, el) {
-            log('reply=' + data);
+            var form = MonkeyBean.TM.get('reply');
+            form.show();
+            form.setContent('@' + data.split(dataSpliter)[1] + '\n');
         },
         //引用用户发言
         quote : function(data) {
@@ -371,57 +509,41 @@ typeof Updater != 'undefined' && new Updater({
         only : function(data) {
             var items = this.cache || (this.cache = $('[monkey_data]')),
                 len = items.length,
-                i = 0;
-            log(len);
-            if(len > 0) {
-                while(len--) {
-                    log(items[len]);
-                    items[len].attr('monkey_data') != data && items[len].hide();
-                }
+                i = 0,
+                tmp = null;
+            while(len--) {
+                tmp = items.eq(len);
+                tmp.attr('monkey_data') != data && tmp.hide();
             }
         },
         //高亮该用户所有发言
         highlight : function(data) {
             var items = $('[monkey_data=' + data + ']'),
                 len = items.length,
-                i = 0;
-            //这里的this是monkeyComment.toolRel，但是不影响操作~
-            this.clicked = !this.clicked;
-            log(len);
-            if(len > 0) {
-                if(this.clicked) {
-                    while(len--) {
-                        css(items[len], 'backgroundColor', cHighLightColor);
-                    }
-                } else {
-                    while(len--) {
-                        css(items[len], 'backgroundColor', cBlankStr);
-                    }
-                }
+                tmpColor = '';
+            tmpColor = (this.clicked = !this.clicked) ? cHighLightColor : cBlankStr;
+            while(len--) {
+                items.eq(len).css('backgroundColor', tmpColor);
             }
         },
         //忽略该用户所有发言
         ignore : function(data) {
-            var items = nuts.queryAll('[monkey_data=' + data + ']'),
-                len = items.length,
-                i = 0;
-            if(len > 0) {
-                while(len--) {
-                    hide(items[len]);
-                }
+            var items = $('[monkey_data=' + data + ']'),
+                len = items.length;
+            while(len--) {
+                items.eq(len).hide();
             }
         },
         //还原为原始状态
         reset : function(data) {
-            var items = this.cache || nuts.queryAll('[monkey_data]'),
+            var items = this.cache || $('[monkey_data]'),
                 len = items.length,
-                i = 0;
+                tmp = null;
             this.clicked = false;  //"高亮"里需要这个参数
-            if(len > 0) {
-                while(len--) {
-                    show(items[len]);
-                    css(items[len], 'backgroundColor', cBlankStr);
-                }
+            while(len--) {
+                tmp = items.eq(len);
+                tmp.show();
+                tmp.css('backgroundColor', cBlankStr);
             }
         }
     };
@@ -438,22 +560,22 @@ typeof Updater != 'undefined' && new Updater({
 
         filter : /www.douban.com\/(mine|(people\/.+\/)$)/,
 
-        css : '.monkeybean-weather{position:relative;top:10px;}',
+        css : '.Monkey-Weather{position:relative;top:10px;}',
 
-        html : '<div style="float:left;margin-right:10px;">\
-                    <img height="40" width="40" alt="{1}" src="http://g0.gstatic.com{2}">\
-                    <br>\
-                </div>\
-                <span><strong>{3}</strong></span>\
-                <span>{4}℃</span>\
-                <div style="float:">当前：&nbsp;{1}\
+        html : '<div class="Monkey-Weather">\
+                    <div style="float:left;margin-right:10px;">\
+                        <img height="40" width="40" alt="{1}" src="http://g0.gstatic.com{2}">\
+                        <br>\
+                    </div>\
+                    <span><strong>{3}</strong></span>\
+                    <span>{4}℃</span>\
+                    <div style="float:">当前：&nbsp;{1}\
+                    </div>\
                 </div>',
 
         el : $('#profile'),
 
         load : function() {
-            //console.dir(this);
-            this.bind('change', this.render, this);
             this.fetch();
         },
 
@@ -480,25 +602,26 @@ typeof Updater != 'undefined' && new Updater({
                         temp : xml.tag('temp_c', current).data,
                         place : place
                     });
+                    that.render();
                 }
             });
         },
 
         render : function() {
             if(!this.el) return;
-            var container = div.cloneNode(true);
-            container.className = 'monkeybean-weather';
-            container.innerHTML = this.html.replace(/\{1\}/g, this.get('condition'))
-                                            .replace('{2}', this.get('icon'))
-                                            .replace('{3}', this.get('place'))
-                                            .replace('{4}', this.get('temp'));
-            $(container).insertBefore(this.el);
+            GM_addStyle(this.css);
+            var container = $(this.html.replace(/\{1\}/g, this.get('condition'))
+                                        .replace('{2}', this.get('icon'))
+                                        .replace('{3}', this.get('place'))
+                                        .replace('{4}', this.get('temp')));
+            container.insertBefore(this.el);
         }
     });
 
     /**
      * 留言板，增加回复功能
      * 适用页面：个人主页与留言板页
+     * updateTime : 2012-2-19
      */
     //TODO:尚未完成，豆瓣助手在firefox也无法提交到别人的留言板，这个问题推迟解决
     /**
@@ -506,7 +629,7 @@ typeof Updater != 'undefined' && new Updater({
         //TODO：<span class="gact">
         html : {
             'doumail' : '&nbsp; &nbsp; <a href="/doumail/write?to={1}">回豆邮</a>',
-            'reply' : '&nbsp; &nbsp; <a href="JavaScript:void(0);" monkey-data="{1}[-]{2}" title="回复到对方留言板">回复</a>',
+            'reply' : '&nbsp; &nbsp; <a href="JavaScript:void(0);" monkey-data="{1}' + dataSpliter + '{2}" title="回复到对方留言板">回复</a>',
             'form' : '<form style="margin-bottom:12px" id="fboard" method="post" name="bpform">\
                             <div style="display:none;"><input type="hidden" value="' + MonkeyBean.getCk() + '" name="ck"></div>\
                             <textarea style="width:97%;height:50px;margin-bottom:5px" name="bp_text"></textarea>\
@@ -560,7 +683,7 @@ typeof Updater != 'undefined' && new Updater({
 
         //TODO:点击回复按钮时，应该可以回复到对方留言板
         reply : function(userMsg) {
-            var tmpArr = userMsg.split('[-]');
+            var tmpArr = userMsg.split(dataSpliter);
             this.form.find('[type="submit"]').val('回复到的' + tmpArr[1] + '的留言板');
             this.form.attr('action', 'http://www.douban.com/people/' + tmpArr[0] + '/board');
             this.resetBtn.css('display', 'block');
@@ -670,18 +793,67 @@ typeof Updater != 'undefined' && new Updater({
     MonkeyModule('MonkeyComment', {
         filter : /www.douban.com\/group\/topic\/\d+/,
 
+        fit : function() {
+            return true;
+        },
+
         css : '.Monkey-floor{ float:right; margin-right:5px;}',
+
+        html : '<span monkey-data="{1}" >\
+                    <span>|</span>\
+                    <a href="javascript:void(0);" monkey-action="reply" rel="nofollow" title="回复该用户发言" style="display: inline;margin-left:0;">回</a>\
+                    <a href="javascript:void(0);" monkey-action="quote" rel="nofollow" title="引用该用户发言" style="display: inline;margin-left:0;">引</a>\
+                    <a href="javascript:void(0);" monkey-action="only" rel="nofollow" title="只看该用户的发言" style="display: inline;margin-left:0;">只</a>\
+                    <a href="javascript:void(0);" monkey-action="highlight" rel="nofollow" title="高亮该用户的所有发言" style="display: inline;margin-left:0;">亮</a>\
+                    <a href="javascript:void(0);" monkey-action="ignore" rel="nofollow" title="忽略该用户的所有发言" style="display: inline;margin-left:0;">略</a>\
+                    <a href="javascript:void(0);" monkey-action="reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">原</a>\
+                </span>',
 
         el : [$('.topic-reply'), $('.paginator .thispage')],  //第一个为小组回复，最后一个是当前页数
 
         load : function() {
+            this.render();
+
+            //这里注册的事件同样适用于楼主工具条。
+            var that = this;
+            $(document.body).delegate('a[monkey-action]', 'click', function() {
+                var actionName = this.getAttribute('monkey-action');
+                log(this.parentNode.getAttribute('data'));
+                actionName && monkeyCommentToolbox[actionName] && monkeyCommentToolbox[actionName](this.parentNode.getAttribute('monkey-data'), this);
+            })
+
             //楼层数。一般来说，多页的链接后面都有一个start参数，表示这页的楼层是从多少开始的。但这个参数并不可靠，考虑分析class为paginator的DIV，里面的a标签更可靠些。
             //小组的回复区域：class为topic-reply的UL，影视书籍的回复：ID为comments的DIV
             //分页栏：class为paginator的DIV，当前页码：class为thispage的span
-            var currentPage = this.el[1];
+            var currentPage = this.el[1],
+                items,
+                tmp = null,
+                i = 0,
+                len = 0,
+                userId = '',
+                nickName = '',
+                start = 0;
+
+            start = +(query()['start']) || (currentPage && typeof !isNaN(+(currentPage.textContent)) && 100 * (+(currentPage.textContent) - 1)) || 0;
             this.set({
-                'start' : +(query()['start']) || (currentPage && typeof !isNaN(+(currentPage.textContent)) && 100 * (+(currentPage.textContent) - 1)) || 0
-            })
+                'start' : start
+            });
+
+            items = this.el[0].find('li');
+            len = items.length;
+            log('len==' + len);
+            if(len < 1) return;
+
+            for(; i<len; i++) {
+                tmp = items[i].getElementsByTagName('h4')[0];
+                tmp.innerHTML += '<span class="Monkey-floor">' + (start + i + 1) + '楼</span>';
+
+                tmp = items[i].getElementsByTagName('a')[1];
+                userId = tmp.href.replace('http://www.douban.com/people/', '').split('/')[0];
+                nickName = tmp.innerHTML;
+               // items[i].setAttribute('monkey_data', userId);
+                items[i].querySelector('div.operation_div').innerHTML += this.html.replace('{1}', userId + dataSpliter + nickName);
+            }
 
             var monkeySelector = {
                 'group' : {  //小组
@@ -702,7 +874,7 @@ typeof Updater != 'undefined' && new Updater({
             };
 
 
-            var reply = nuts.query('.topic-reply'),
+         /*   var reply = nuts.query('.topic-reply'),
                 comments = nuts.query('#comments'),
                 fragment = document.createDocumentFragment(),
                 items,
@@ -761,21 +933,11 @@ typeof Updater != 'undefined' && new Updater({
                     }
                 }
 
-            }
-            //注册工具事件
-            this.initToolbarEvent();
+            }*/
         },
 
         render : function() {
             GM_addStyle(this.css);
-
-            //这里注册的事件同样适用于楼主工具条。
-            var that = this;
-            $(document.body).delegate('a[monkey-action]', 'click', function() {
-                var actionName = this.getAttribute('monkey-action');
-                log(this.parentNode.getAttribute('data'));
-                actionName && monkeyCommentToolbox[actionName] && monkeyCommentToolbox[actionName](this.parentNode.getAttribute('data'), this);
-            })
         }
     });
 
