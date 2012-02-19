@@ -50,15 +50,6 @@ typeof Updater != 'undefined' && new Updater({
 
     //-------------------------猴子工具箱----------------------------------
     var monkeyToolBox = {
-        //事件代理
-        delegate : function(parentel, child, eventtype, handler) {
-            parentel.addEventListener(eventtype, function(e) {
-                if(e.target.tagName.toLowerCase() == child.toLowerCase()) {
-                    handler.call(e.target, e);
-                }
-            })
-        },
-
         cookie : {
             get : function(name) {
                 var start,
@@ -76,14 +67,6 @@ typeof Updater != 'undefined' && new Updater({
                 return '';
             }
         },
-
-        css : function(el, attribute, value) {
-            if(typeof value != 'undefined') {
-                el.style[attribute] = value;
-            }
-            return el.style[attribute];
-        },
-
         //地址查询字符串搜索
         locationQuery : function() {
             if(location.search.length < 0) return {};
@@ -120,48 +103,13 @@ typeof Updater != 'undefined' && new Updater({
             tostring : function() {
                 return this.el || {};
             }
-        },
-
-        toggle : function(el, value) {
-            if(!el) return;
-            if(el.style.display != 'none') {
-                monkeytoolbox.hide(el);
-            } else {
-                monkeytoolbox.show(el, value);
-            }
-        },
-
-        show : function(el, value) {
-            el && (el.style.display = value || 'block');
-        },
-
-        hide : function(el) {
-            el && (el.style.display = 'none');
-        },
-
-        trim : function(s) {
-            return (s + '').trim();
-        },
-
-        position : function(el) {
-            var rect = el.getBoundingClientRect();
-            return {
-                'left' : rect.left + window.scrollX,
-                'top' : rect.top + window.scrollY
-            }
         }
     };
 
     //shortcuts
     var xml = monkeyToolBox.xml,
         cookie = monkeyToolBox.cookie,
-        css = monkeyToolBox.css,
-        query = monkeyToolBox.locationQuery,
-        delegate = monkeyToolBox.delegate,
-        show = monkeyToolBox.show,
-        hide = monkeyToolBox.hide,
-        trim = monkeyToolBox.trim,
-        position = monkeyToolBox.position;
+        query = monkeyToolBox.locationQuery;
 
     var MonkeyBean = {
         author : 'sunnylost',
@@ -177,7 +125,7 @@ typeof Updater != 'undefined' && new Updater({
             MonkeyBean.debugMode && typeof console !== 'undefined' && console.log(msg);
         },
 
-        //TODO：使用豆瓣API有限制，每个IP每分钟10次，如果加上key的话是每分钟40次，如果超过限制会被封IP，因此要记录调用API次数及其间隔。
+        //TODO,使用豆瓣API有限制，每个IP每分钟10次，如果加上key的话是每分钟40次，如果超过限制会被封IP，因此要记录调用API次数及其间隔。
         useAPI : function() {
             var count = this.get(apiCount),
                 lastTime = this.get(apiLastTime);
@@ -215,7 +163,7 @@ typeof Updater != 'undefined' && new Updater({
         isLogin : function() {
             return (typeof this.login !== 'undefined' && this.login) || (this.login = !!this.getCk());
         },
-        //TODO：获取用户ID，有问题
+        //TODO:获取用户ID，有问题
         userId : function() {
             var str = cookie.get('dbcl2');
             return str && str.split(':')[0];
@@ -240,7 +188,6 @@ typeof Updater != 'undefined' && new Updater({
                 for(m in moduleTree) {
                     if(hasOwn.call(moduleTree, m)) {
                          log('------' + m + '----' + moduleTree[m].filter);
-                        //MonkeyBean.get('MonkeyBean.' + m, false) 配置
                         moduleTree[m].filter.test(MonkeyBean.path) && moduleTree[m].load();
                     }
                 }
@@ -250,53 +197,7 @@ typeof Updater != 'undefined' && new Updater({
                 register : register,
                 turnOn : turnOn
             }
-        })(),
-
-        //UI组件
-        MonkeyBeanPeal : {
-            'monkeyTip' : function(pos, content) {
-                var tip = this.tip || createTip();
-                tip.innerHTML = monkeyMirror.monkeyTip.replace('{1}', content);
-                hide(tip);
-                css(tip, 'left', pos.left + 'px');
-                css(tip, 'top', pos.top + 'px');
-                show(tip);
-
-                function createTip() {
-                    var css = '#_monkey_tip{background-color: #F9EDBE;border: 1px solid #F0C36D;-webkit-border-radius: 2px;-webkit-box-shadow: 0 2px 4px rgba(0,0,0,0.2);\
-                         border-radius: 2px;box-shadow: 0 2px 4px rgba(0,0,0,0.2);font-size: 13px;line-height: 18px;padding: 16px; position: absolute;\
-                         vertical-align: middle;width: 160px;z-index: 6000;border-image: initial;display:none;}\
-                         ._monkey_arrow_inner {border-top: 6px solid #FFFFFF;top: 43px; z-index: 5;}\
-                         ._monkey_arrow_outer {border-top: 6px solid #666666;z-index: 4;}',
-                        tip;
-                    GM_addStyle(css);
-                    tip = div.cloneNode(true);
-                    tip.id = '_monkey_tip';
-                    //tip.innerHTML = monkeyMirror.monkeyTip;
-                    document.body.appendChild(tip);
-                    delegate(tip,'a', 'click', function() {
-                        hide(tip);
-                    })
-                    return peal.tip = tip;
-                }
-            },
-
-            'monkeyReplyBox' : function() {
-                var box = this.box || createReplyBox();
-                show(box);
-
-                function createReplyBox() {
-                    var css = '#_monkey_replybox{position:fixed;top:25%;width:100px;height:50px;scroll:auto-x;right:0;border:1px solid #f9edbe;}',
-                        box = div.cloneNode(true);
-
-                    GM_addStyle(css);
-                    box.id = '_monkey_replybox';
-                    box.innerHTML = monkeyMirror.replyBox;
-                    document.body.appendChild(box);
-                    return peal.box = box;
-                }
-            }
-        }
+        })()
     };
     var log = MonkeyBean.log;
 
@@ -443,9 +344,7 @@ typeof Updater != 'undefined' && new Updater({
     })
     /*********************************UI end**************************************************************/
 
-    /***********************************************************************************************/
-    /***********************************************************************************************/
-
+    /*********************************Module begin**************************************************************/
     /**
      * 天气模块
      */
@@ -518,13 +417,13 @@ typeof Updater != 'undefined' && new Updater({
      * 留言板，增加回复功能
      * 适用页面：个人主页与留言板页
      */
-    //TODO:尚未完成
+    //TODO:尚未完成，豆瓣助手在firefox也无法提交到别人的留言板，这个问题推迟解决
     MonkeyModule('MonkeyMessageBoard', {
         //TODO：<span class="gact">
         html : {
             'doumail' : '&nbsp; &nbsp; <a href="/doumail/write?to={1}">回豆邮</a>',
             'reply' : '&nbsp; &nbsp; <a href="JavaScript:void(0);" monkey-data="{1}[-]{2}" title="回复到对方留言板">回复</a>',
-            'form' : '<form style="margin-bottom:12px" method="post" name="bpform">\
+            'form' : '<form style="margin-bottom:12px" id="fboard" method="post" name="bpform">\
                             <div style="display:none;"><input type="hidden" value="' + MonkeyBean.getCk() + '" name="ck"></div>\
                             <textarea style="width:97%;height:50px;margin-bottom:5px" name="bp_text"></textarea>\
                             <input type="submit" value=" 留言 " name="bp_submit">\
@@ -537,7 +436,7 @@ typeof Updater != 'undefined' && new Updater({
         el : $('ul.mbt'),
 
         load : function() {
-
+            this.render();
         },
 
         render : function() {
@@ -547,7 +446,7 @@ typeof Updater != 'undefined' && new Updater({
             this.resetBtn.bind('click', $.proxy(this.reset, this));
             this.bind('reply', this.reply, this);
 
-            if(!this.el || (this.el = this.el.querySelectorAll('li.mbtrdot')).length < 1) return;
+            if(!this.el || (this.el = this.el.find('li.mbtrdot')).length < 1) return;
             var len = this.el.length,
                 i = 0,
                 that = this,
@@ -570,7 +469,7 @@ typeof Updater != 'undefined' && new Updater({
 
                 }
             }
-            el.delegate('a[monkey-data]', 'click', function() {
+            this.el.delegate('a[monkey-data]', 'click', function() {
                 that.trigger('reply', $(this).attr('monkey-data'));
             });
         },
@@ -578,20 +477,74 @@ typeof Updater != 'undefined' && new Updater({
         //TODO:点击回复按钮时，应该可以回复到对方留言板
         reply : function(userMsg) {
             var tmpArr = userMsg.split('[-]');
-            this.form.find('[type="submit"]').attr('value', '回复到的' + tmpArr[1] + '的留言板');
+            this.form.find('[type="submit"]').val('回复到的' + tmpArr[1] + '的留言板');
             this.form.attr('action', 'http://www.douban.com/people/' + tmpArr[0] + '/board');
             this.resetBtn.css('display', 'block');
         },
 
         reset : function() {
-            this.form.find('[type="submit"]').attr('value', '回复');
+            this.form.find('[type="submit"]').val('回复');
             this.form.attr('action', '');
             this.resetBtn.css('display', 'none');
         }
     });
 
+    //TODO 猴子导航栏——用于显示顶部导航栏的二级菜单
+    /**
+    MonkeyModule('MonkeyNavigator', {
+        css : '#_monkey_secondNav{display:block;width:600px;} #_monkey_secondNav ul{position:relative;z-index:5;} #_monkey_secondNav ul li{float:none;}',
+        load : function() {
+                return false;
+            //log(this.name + ' 准备加载！');
 
+            //在未登录的状态下，首页不显示导航栏
+            if(window.location.href == monkeyMirror.doubanMainPage && !nuts.isLogin()) return false;
 
+            GM_addStyle(this.css);
+
+            var nav = nuts.query('.top-nav-items'),
+                navs = nuts.queryAll('li', nav),
+                ul = nuts.query('ul', nav),
+                li = document.createElement('li'),
+                i = 0,
+                len = navs.length,
+                tmpDiv,
+                content;
+
+            if(len < 1) return;
+
+            //如果用户名已登录，则显示"我的豆瓣"
+            if(nuts.isLogin()) {
+                li.innerHTML = monkeyMirror.myDouban;
+                ul.insertBefore(li, ul.children[0]);
+            }
+
+            tmpDiv = div.cloneNode(true);
+            tmpDiv.id = '_monkey_secondNav';
+            tmpDiv.innerHTML = monkeyMirror.secondNav.replace('{1}', userLocation || 'www');
+            nav.appendChild(tmpDiv);
+
+            delegate(nuts.query('ul', nav), 'a', 'mouseover', function(e) {
+                if(trim(this.textContent) == '更多') return;  //忽略"更多"的鼠标事件
+                var current = nuts.query('#' + this.textContent);
+                //if(this.parentNode.className.indexOf('on') != -1) return;  //不会显示当前栏目的第二级菜单
+                show(current, 'inline-block');
+                if(monkeyNav.last != current) {
+                    hide(monkeyNav.last);
+                    monkeyNav.last = current;
+                }
+            })
+
+            content = nuts.query('#content');
+            if(content) {
+                content.addEventListener('mouseover', function() {
+                    hide(monkeyNav.last);
+                });
+            }
+        }
+    });
+*/
+/*********************************Module end**************************************************************/
 
     var userName = MonkeyBean.get(cName, ''),
         userLocation = MonkeyBean.get(cLocation, ''),
@@ -739,9 +692,6 @@ typeof Updater != 'undefined' && new Updater({
                                 <label for="monkey_elevator">跳转楼层</label>\
                                 <input type="text" name="monkey_elevator">\
                             </div>',
-        //提示组件
-        'monkeyTip' : '<p>{1}</p>\
-                     <a href="javascript:void(0)" style="position:relative;left:45%;" action-type="close" >关闭</a>',
 
         'searchBar' : '<div id="db_scr_btm" title="双击：立即搜索；单击：选择搜索范围">\
                             <div class="db_scr_btm">综合</div>\
@@ -752,83 +702,8 @@ typeof Updater != 'undefined' && new Updater({
                             <input type="hidden" value="" name="cat">\
                         </div>'
     };
+/**
 
-    //猴子豆核心
-    var nuts = {
-        //是否登录
-        isLogin : function() {
-            return (typeof this.login !== 'undefined' && this.login) || (this.login = !!cookie.get('ck'));
-        },
-
-        query : function(selector, context) {
-            context = context || document;
-            return context.querySelector(selector);
-        },
-
-        queryAll : function(selector, context) {
-            context = context || document;
-            return context.querySelectorAll(selector);
-        },
-
-        //载入模块
-        load : function() {
-            monkeyModuleManager.turnOn();
-        }
-    };
-
-
-    //猴子豆外皮，UI
-    var peal = {
-        'monkeyTip' : function(pos, content) {
-            var tip = this.tip || createTip();
-            tip.innerHTML = monkeyMirror.monkeyTip.replace('{1}', content);
-            hide(tip);
-            css(tip, 'left', pos.left + 'px');
-            css(tip, 'top', pos.top + 'px');
-            show(tip);
-
-            function createTip() {
-                var css = '#_monkey_tip{background-color: #F9EDBE;border: 1px solid #F0C36D;-webkit-border-radius: 2px;-webkit-box-shadow: 0 2px 4px rgba(0,0,0,0.2);\
-                     border-radius: 2px;box-shadow: 0 2px 4px rgba(0,0,0,0.2);font-size: 13px;line-height: 18px;padding: 16px; position: absolute;\
-                     vertical-align: middle;width: 160px;z-index: 6000;border-image: initial;display:none;}\
-                     ._monkey_arrow_inner {border-top: 6px solid #FFFFFF;top: 43px; z-index: 5;}\
-                     ._monkey_arrow_outer {border-top: 6px solid #666666;z-index: 4;}',
-                    tip;
-                GM_addStyle(css);
-                tip = div.cloneNode(true);
-                tip.id = '_monkey_tip';
-                //tip.innerHTML = monkeyMirror.monkeyTip;
-                document.body.appendChild(tip);
-                delegate(tip,'a', 'click', function() {
-                    hide(tip);
-                })
-                return peal.tip = tip;
-            }
-        },
-
-        'monkeyReplyBox' : function() {
-            var box = this.box || createReplyBox();
-            show(box);
-
-            function createReplyBox() {
-                var css = '#_monkey_replybox{position:fixed;top:25%;width:100px;height:50px;scroll:auto-x;right:0;border:1px solid #f9edbe;}',
-                    box = div.cloneNode(true);
-
-                GM_addStyle(css);
-                box.id = '_monkey_replybox';
-                box.innerHTML = monkeyMirror.replyBox;
-                document.body.appendChild(box);
-                return peal.box = box;
-            }
-        }
-
-    };
-
-    //页面参数，用于缓存
-    var pageParam = {
-        'floor' : null,  //楼层
-        'floorStart' : 0
-    };
 
     var monkeySelector = {
         'group' : {  //小组
@@ -847,87 +722,6 @@ typeof Updater != 'undefined' && new Updater({
             'commentItems' : '.comment-item'
         }
     };
-
-//-------------------------模块----------------------------------
-        //猴子模块管理员,请叫我Mr.TM  (triple M)
-    var monkeyModuleManager = (function() {
-        var moduleTree = [],  //模块树，所有模块都生长在树上。
-            turnOn,
-            register;
-
-        register = function(module) {
-            moduleTree.push(module);
-        };
-
-        turnOn = function() {
-            var path = location.hostname + location.pathname,
-                m,
-                len = moduleTree.length;
-            i = 0;
-            for(;i<len; i++) {
-                m = moduleTree[i];
-                path.match(m.filter) && !m.on && m.load();
-            }
-        };
-
-        return {
-            register : register,
-            turnOn : turnOn
-        }
-    })();
-
-    //猴子导航栏——用于显示顶部导航栏的二级菜单
-    var monkeyNav = new MonkeyModule('nav', {
-        css : '#_monkey_secondNav{display:block;width:600px;} #_monkey_secondNav ul{position:relative;z-index:5;} #_monkey_secondNav ul li{float:none;}',
-        load : function() {
-            //log(this.name + ' 准备加载！');
-
-            //在未登录的状态下，首页不显示导航栏
-            if(window.location.href == monkeyMirror.doubanMainPage && !nuts.isLogin()) return false;
-
-            GM_addStyle(this.css);
-
-            var nav = nuts.query('.top-nav-items'),
-                navs = nuts.queryAll('li', nav),
-                ul = nuts.query('ul', nav),
-                li = document.createElement('li'),
-                i = 0,
-                len = navs.length,
-                tmpDiv,
-                content;
-
-            if(len < 1) return;
-
-            //如果用户名已登录，则显示"我的豆瓣"
-            if(nuts.isLogin()) {
-                li.innerHTML = monkeyMirror.myDouban;
-                ul.insertBefore(li, ul.children[0]);
-            }
-
-            tmpDiv = div.cloneNode(true);
-            tmpDiv.id = '_monkey_secondNav';
-            tmpDiv.innerHTML = monkeyMirror.secondNav.replace('{1}', userLocation || 'www');
-            nav.appendChild(tmpDiv);
-
-            delegate(nuts.query('ul', nav), 'a', 'mouseover', function(e) {
-                if(trim(this.textContent) == '更多') return;  //忽略"更多"的鼠标事件
-                var current = nuts.query('#' + this.textContent);
-                //if(this.parentNode.className.indexOf('on') != -1) return;  //不会显示当前栏目的第二级菜单
-                show(current, 'inline-block');
-                if(monkeyNav.last != current) {
-                    hide(monkeyNav.last);
-                    monkeyNav.last = current;
-                }
-            })
-
-            content = nuts.query('#content');
-            if(content) {
-                content.addEventListener('mouseover', function() {
-                    hide(monkeyNav.last);
-                });
-            }
-        }
-    });
 
     var monkeyCommentToolbox = {
         //快捷回复
@@ -1124,6 +918,7 @@ typeof Updater != 'undefined' && new Updater({
          * input 设置只能输入数字
          * 楼层数在其他页？
          */
+    /**
         elevator : (function() {
             //以下代码只适用于没有经过翻页的页面
             var to, first, last;
@@ -1153,6 +948,7 @@ typeof Updater != 'undefined' && new Updater({
         })()
     });
 
+    /**
     //增强搜索栏——代码来源于豆瓣助手
     var monkeySearchBar = new MonkeyModule('search', {
         css : '.db_scr_btm{background:#E9F4E9;color:#0C7823;cursor:pointer;display:none;float:left;text-align:center;position:relative;width:19%;border-left:1px solid #E9F4E9;border-right:1px solid #E9F4E9;} .db_scr_btm:hover{position:relative;top:-1px;border-bottom:1px solid #a6d098;border-left:1px solid #a6d098;border-right:1px solid #a6d098;background:#fff;} .nav-srh:hover .db_scr_btm{display:block;}',
@@ -1185,9 +981,7 @@ typeof Updater != 'undefined' && new Updater({
             }
         }
     });
-
-    nuts.load();
-    MonkeyBean.MonkeyModuleManager.turnOn();
+*/
     MonkeyBean.init();
 
     log(((new Date()) - startTime)/1000 + '秒');
