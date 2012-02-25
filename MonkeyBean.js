@@ -169,6 +169,12 @@ typeof Updater != 'undefined' && new Updater({
             MonkeyBean.debugMode && typeof console !== 'undefined' && console.log(msg);
         },
 
+        GUID : 0,
+
+        CommentId : function() {
+            return 'Monkey-Comment-' + (this.GUID++);
+        },
+
         //TODO,使用豆瓣API有限制，每个IP每分钟10次，如果加上key的话是每分钟40次，如果超过限制会被封IP，因此要记录调用API次数及其间隔。
         useAPI : function() {
             var count = this.get(apiCount),
@@ -555,6 +561,10 @@ typeof Updater != 'undefined' && new Updater({
     /*********************************UI end**************************************************************/
 
     /*********************************Common Function****************************************************************/
+    /**
+     * 通用留言工具函数
+     * updateTime : 2012-2-21
+     */
     var monkeyCommentToolbox = {
         //快捷回复
         reply : function(data, el) {
@@ -569,10 +579,12 @@ typeof Updater != 'undefined' && new Updater({
                 quoteHeader = '',
                 quoteContent = '',
                 spliter = '-------------------------------------------------------------------\n';
-            if(!isNumeric(commentId)) return;
+            log('-----=====' + commentId);
             comment = $('#' + commentId);
             quoteHeader = comment.find('h4').text().replace(/\s+/g, ' ') + '\n';
             quoteContent = comment.find('.reply-doc p').text() + '\n';
+            log(quoteHeader);
+            log(quoteContent);
             MonkeyBean.TM.get('reply').setContent(spliter + quoteHeader + quoteContent + spliter);
         },
         //只看该用户发言
@@ -681,9 +693,9 @@ typeof Updater != 'undefined' && new Updater({
             if(!this.el) return;
             GM_addStyle(this.css);
             var container = $(this.html.replace(/\{1\}/g, this.get('condition'))
-                .replace('{2}', this.get('icon'))
-                .replace('{3}', this.get('place'))
-                .replace('{4}', this.get('temp')));
+                                        .replace('{2}', this.get('icon'))
+                                        .replace('{3}', this.get('place'))
+                                        .replace('{4}', this.get('temp')));
             container.insertBefore(this.el);
         }
     });
@@ -693,7 +705,7 @@ typeof Updater != 'undefined' && new Updater({
      * 适用页面：个人主页与留言板页
      * updateTime : 2012-2-19
      */
-    //TODO:尚未完成，豆瓣助手在firefox也无法提交到别人的留言板，这个问题推迟解决
+        //TODO:尚未完成，豆瓣助手在firefox也无法提交到别人的留言板，这个问题推迟解决
 
     MonkeyModule('MonkeyMessageBoard', {
         //TODO：<span class="gact">
@@ -831,31 +843,37 @@ typeof Updater != 'undefined' && new Updater({
 
 
     /**
-     * 楼主工具条
-     * updateTime：2012-2-19
+     * 楼主工具条——依赖于下面的回复增强模块
+     * updateTime：2012-2-21
      */
     MonkeyModule('MonkeyPosterToolbar', {
-        html : '<span monkey-data="{1}" class="fleft">\
-                    &gt;&nbsp;<a href="javascript:void(0);" monkey-action="reply" rel="nofollow" title="回复楼主发言" style="display: inline;margin-left:0;">回复</a>\
-                    &gt;&nbsp;<a href="javascript:void(0);" monkey-action="only" rel="nofollow" title="只看楼主的发言" style="display: inline;margin-left:0;">只看</a>\
-                    &gt;&nbsp;<a href="javascript:void(0);" monkey-action="highlight" rel="nofollow" title="高亮楼主的所有发言" style="display: inline;margin-left:0;">高亮</a>\
-                    &gt;&nbsp;<a href="javascript:void(0);" monkey-action="ignore" rel="nofollow" title="忽略楼主的所有发言" style="display: inline;margin-left:0;">忽略</a>\
-                    &gt;&nbsp;<a href="javascript:void(0);" monkey-action="reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">还原</a>\
-                  </span>',
-
-        filter : [/www.douban.com\/group\/topic\/\d+/, /(movie|book).douban.com\/review\/\d+/],
+        html : '<div style="margin-bottom:10px;font-size: 14px;">\
+                    <span monkey-data="{1}">\
+                        &gt;&nbsp;<a href="javascript:void(0);" monkey-action="reply" rel="nofollow" title="回复楼主发言" style="display: inline;margin-left:0;">回复</a>\
+                        &gt;&nbsp;<a href="javascript:void(0);" monkey-action="only" rel="nofollow" title="只看楼主的发言" style="display: inline;margin-left:0;">只看</a>\
+                        &gt;&nbsp;<a href="javascript:void(0);" monkey-action="highlight" rel="nofollow" title="高亮楼主的所有发言" style="display: inline;margin-left:0;">高亮</a>\
+                        &gt;&nbsp;<a href="javascript:void(0);" monkey-action="ignore" rel="nofollow" title="忽略楼主的所有发言" style="display: inline;margin-left:0;">忽略</a>\
+                        &gt;&nbsp;<a href="javascript:void(0);" monkey-action="reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">还原</a>\
+                    </span>\
+                </div>',
 
         fit : function() {
-            //.test(MonkeyBean.path)
-            return true;
+            return false;
         },
-//['div.piir a']
-        el : [$('div.topic-doc a')[0], $('div.topic-opt')],  //第一个包含了楼主的ID，第二个是插入工具条的位置
 
-        load : function() {
-            if(!this.el[0]) return;
+        els : [
+            [$('div.topic-doc a')[0], $('div.topic-opt')],   //第一个包含了楼主的ID，第二个是插入工具条的位置
+            [$('span.pl2 a')[0], $('div.review-panel')],
+            [$('span.pl2 a')[0], $('div.review-stat')]
+        ],
+
+        load : function(index) {
+            if(index === undefined) return false;
+
+            this.el = this.els[index];
+
             var posterId = this.el[0].href.replace('http://www.douban.com/people/', '').split('/')[0],
-                posterNickName = this.el[0].innerHTML;
+                posterNickName = this.el[0].textContent;
             this.set({
                 'posterId' : posterId,
                 'posterNickName' : posterNickName
@@ -864,28 +882,38 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         render : function() {
-            this.el[1] && (this.el[1].append(this.html.replace('{1}', this.get('posterId') + dataSpliter + this.get('posterNickName'))));
             log(this.el[1]);
+            this.el[1] && (this.el[1].prepend(this.html.replace('{1}', this.get('posterId') + dataSpliter + this.get('posterNickName'))));
         }
     });
 
     /**
      * 猴子回复增强模块，适用于小组回复，书籍影视评论等，功能包括楼层数显示。
-     * updateTime : 2012-2-19
+     * 我忍不住要吐槽啦！为啥豆瓣很多页面功能类似，html结构全完全不同！搞啥啊……
+     * updateTime : 2012-2-21
      */
     MonkeyModule('MonkeyComment', {
-        //第一个为小组讨论，第二个为影评，第三个为书评，第四个为日志
-        filter : [/www.douban.com\/group\/topic\/\d+/, /movie.douban.com\/review\/\d+/, /book.douban.com\/review\/\d+/, /www.douban.com\/note\/\d+/],
-
-        el : [$('.topic-reply')],  //第一个为小组回复
+        //第一个为小组讨论，第二个为影评书评乐评，第三个为论坛
+        filter : [
+                    /www.douban.com\/group\/topic\/\d+/,
+                    /(book|movie|music).douban.com\/review\/\d+/,
+                    /(book|movie|music).douban.com\/subject\/\d+\/discussion\/\d+/,
+                    /www.douban.com\/note\/\d+/
+        ],
 
         els : {
             //回复区域，判断楼层数，放置楼层数的位置，放置工具栏的位置
-            '0' : [$('.topic-reply'), 'li', 'h4', 'div.operation_div'],  //小组
-            '1' : [$('#comments'), 'li', 'h4', 'div.operation_div'],                //电影
-            '2' : [$('#comments'), 'li', 'h4', 'div.operation_div'],                                          //书籍
+            '0' : $('.topic-reply'),  //小组
+            '1' : $('#comments'),                //电影 书籍 音乐
             //楼主信息：#db-usr-profile .info a，xxx的主页，或者从头像的alt里获取，楼主工具在sns-bar上面添加  #comments 为整个留言区域，每一条留言是div.comment-item，留言人的信息：div.author a，楼层数就在author这里加。其余功能在div.group_banned处追加
-            '3' : [$('#comments')]                                           //日志
+            '2' : $('#comments'),                                          //论坛
+            '3' : $('#comments')                                           //日志
+        },
+
+        attr : {
+            'commentItem' : 'li',
+            'floor' : 'h4',
+            'commentTool' : 'div.operation_div'
         },
 
         fit : function() {
@@ -894,7 +922,15 @@ typeof Updater != 'undefined' && new Updater({
             for(; i<len; i++) {
                 if(this.filter[i].test(MonkeyBean.path)) {
                     this.el = this.els[i];
-                    if(i == 1 || i == 2) this.refactor();
+                    this.set('index', i);
+                    if(i == 1) {
+                        this.refactor();
+                    } else if(i == 2) {  //论坛
+                        this.set({
+                            'commentItem' : 'table.wr',
+                            'commentTool' : 'td:eq(1)'
+                        });
+                    }
                     return true;
                 }
             }
@@ -903,7 +939,7 @@ typeof Updater != 'undefined' && new Updater({
 
         css : '.Monkey-floor{ float:right; margin-right:5px;font-size:12px;}',
 
-        html : '<span monkey-data="{1}" style="float:right;">\
+        html : '<span name="monkey-commenttool" monkey-data="{1}" style="float:right;visibility:hidden;">\
                     <span>|</span>\
                     <a href="javascript:void(0);" monkey-action="reply" rel="nofollow" title="回复该用户发言" style="display: inline;margin-left:0;">回</a>\
                     <a href="javascript:void(0);" monkey-action="quote" rel="nofollow" title="引用该用户发言" style="display: inline;margin-left:0;">引</a>\
@@ -918,22 +954,25 @@ typeof Updater != 'undefined' && new Updater({
          */
         refactor : function() {
             //return false;
-            var comments = this.el[0].detach(),
-                 oldContent = comments.html();
+            var comments = this.el.detach(),
+                oldContent = comments.html();
             comments.html(oldContent.replace(/(<span class="wrap">)/, '<li class="clearfix"><div class="reply-doc">$1')
-                                    .replace(/<\/h3><\/span>/g, '</h4></span><p>')
-                                    .replace(/<h3>/g, '<h4>')
-                                    .replace(/(<span class="wrap">)/g, '</p><div class="operation_div" style="display:none;"></div><br></div></li>' +
-                                               '<li class="clearfix"><div class="reply-doc">$1')
-                                     + '</p><div class="operation_div" style="display:none;"></div><br></div></li>');
+                .replace(/(<h2>你的回应.*\s*<\/h2>\s*<div class="txd">)/, '</p><div class="operation_div" style="display:none;"></div><br></div></li>$1')
+                .replace(/<\/h3><\/span>/g, '</h4></span><p>')
+                .replace(/<h3>/g, '<h4>')
+                .replace(/(<span class="wrap">)/g, '</p><div class="operation_div" style="display:none;"></div><br></div></li>' +
+                '<li class="clearfix"><div class="reply-doc">$1'));
 
             $('.piir').append(comments);
+            //将第一个元素替换为换行
             comments.find('li').first().replaceWith('<br>');
             comments.delegate('li', 'mouseover', function() {
-                this.querySelector('div.operation_div').style.display = 'block';
+                var toolbar = this.querySelector('div.operation_div');
+                toolbar && (toolbar.style.display = 'block');
             });
             comments.delegate('li', 'mouseout', function() {
-                this.querySelector('div.operation_div').style.display = 'none';
+                var toolbar = this.querySelector('div.operation_div');
+                toolbar && (toolbar.style.display = 'none');
             });
         },
 
@@ -949,25 +988,23 @@ typeof Updater != 'undefined' && new Updater({
             //分页栏：class为paginator的DIV，当前页码：class为thispage的span
             var currentPage = $('.paginator .thispage'),
                 items,
-                tmp = null,
-                i = 0,
                 len = 0,
-                userId = '',
-                nickName = '',
                 start = 0;
 
-            items = this.el[0].find(this.el[1]);
+            items = this.el.find(this.get('commentItem'));
             len = items.length;
             if(len < 1) return;
 
             //楼层数。一般来说，多页的链接后面都有一个start参数，表示这页的楼层是从多少开始的。但这个参数并不可靠，考虑分析class为paginator的DIV，里面的a标签更可靠些。
             start = +(query()['start']) || (currentPage.length != 0 && !isNaN(+(currentPage.text())) && MonkeyBeanConst.PAGE_ITEM_COUNTS * (+(currentPage.text()) - 1)) || 0;
-                this.set({
+            this.set({
                 'start' : start,
                 'items' : items,
                 'length' : len
             });
             this.render();
+            log('seconde invoke');
+            MonkeyBean.TM.get('MonkeyPosterToolbar').load(this.get('index'));
         },
 
         render : function() {
@@ -977,23 +1014,34 @@ typeof Updater != 'undefined' && new Updater({
                 nickName = '',
                 items = this.get('items'),
                 len = this.get('length'),
-                start = this.get('start');
+                start = this.get('start'),
+                itemId = '';
 
             GM_addStyle(this.css);
             for(; i<len; i++) {
                 tmp = items.eq(i);
 
-                tmp.find(this.el[2])
+                tmp.find(this.get('floor'))
                     .append('<span class="Monkey-floor">' + (start + i + 1) + '楼</span>');
                 tmp = tmp.find('a img').length > 0 ? tmp.find('a')[1] : tmp.find('a')[0];
 
-                log(tmp);
                 userId = tmp.href.replace('http://www.douban.com/people/', '').split('/')[0];
                 nickName = tmp.innerHTML;
-                items.eq(i).attr('monkey-sign', userId);
+
+                tmp = items.eq(i);
+                tmp.attr('monkey-sign', userId);
+
+                (itemId = tmp.attr('id')) === '' && (tmp.attr('id', itemId = MonkeyBean.CommentId()));
+                //log('-----' + itemId + '----' + tmp.attr('id'));
                 //monke-data中保存的数据：用户ID，用户昵称，该条留言的ID
                 //log(this.el[3]);
-                items.eq(i).find(this.el[3]).append(this.html.replace('{1}', userId + dataSpliter + nickName + dataSpliter + items[i].id));
+                tmp = tmp.find(this.get('commentTool'));
+                tmp.append(this.html.replace('{1}', userId + dataSpliter + nickName + dataSpliter + itemId));
+                tmp.parent().hover(function() {
+                    $(this).find('[name=monkey-commenttool]').css('visibility', 'visible');
+                }, function() {
+                    $(this).find('[name=monkey-commenttool]').css('visibility', 'hidden');
+                });
             }
         }
     });
