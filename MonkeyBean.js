@@ -193,7 +193,7 @@ typeof Updater != 'undefined' && new Updater({
         //判断当前页面类型，是否为读书、电影、音乐等等，目前用于为导航栏增加当前页面提示，其中，9点、阿尔法城和fm没有导航栏，不必考虑
         pageType : function() {
             var type = '',
-                normalType = /(www|book|movie|music)\.douban\.com\//;
+                normalType = /(www|book|movie|music)\.douban\.com\/.*/;
             type = this.path.replace(normalType, '$1');
 
             console.log('TYPE====' + type);
@@ -914,31 +914,35 @@ typeof Updater != 'undefined' && new Updater({
                                     <a href="http://book.douban.com/">豆瓣读书</a>\
                                     <ul>\
                                         <li><a href="http://book.douban.com/mine">我读</a></li>\
+                                        <li><a href="http://book.douban.com/updates">动态</a></li>\
                                         <li><a href="http://book.douban.com/recommended">豆瓣猜</a></li>\
                                         <li><a href="http://book.douban.com/chart">排行榜</a></li>\
                                         <li><a href="http://book.douban.com/tag/">分类浏览</a></li>\
                                         <li><a href="http://book.douban.com/review/best/">书评</a></li>\
+                                        <li><a href="http://read.douban.com/">阅读</a><img src="http://img3.douban.com/pics/new_menu.gif" style="top: 4px; position: absolute;"></li>\
                                         <li><a href="http://book.douban.com/cart">购书单</a></li>\
                                     </ul>\
                                 </li>\
                                 <li name="Monkey-Nav-movie">\
                                     <a href="http://movie.douban.com/">豆瓣电影</a>\
                                     <ul>\
-                                        <li><a href="http://movie.douban.com/tv">电视剧</a></li>\
                                         <li><a href="http://movie.douban.com/mine">我看</a></li>\
-                                        <li><a href="http://movie.douban.com/chart">排行榜</a></li>\
-                                        <li><a href="http://movie.douban.com/tag/">分类浏览</a></li>\
-                                        <li><a href="http://movie.douban.com/review/best/">热评</a></li>\
+                                        <li><a style="color:#FF9933;" href="http://movie.douban.com/nowplaying/' + (userLocation || 'location') + '/">影讯</a></li>\
+                                        <li><a href="http://movie.douban.com/celebrities/">影人</a></li>\
+                                        <li><a href="http://movie.douban.com/tv/">电视剧</a></li>\
+                                        <li><a href="http://movie.douban.com/chart/">排行榜</a></li>\
+                                        <li><a href="http://movie.douban.com/tag/">分类</a></li>\
+                                        <li><a href="http://movie.douban.com/review/best/">影评</a></li>\
                                     </ul>\
                                 </li>\
                                 <li name="Monkey-Nav-music">\
                                     <a href="http://music.douban.com/">豆瓣音乐</a>\
                                     <ul>\
-                                        <li><a href="http://music.douban.com/mine">我的音乐</a></li>\
                                         <li><a href="http://music.douban.com/artists/">音乐人</a></li>\
                                         <li><a href="http://music.douban.com/chart">排行榜</a></li>\
                                         <li><a href="http://music.douban.com/tag/">分类浏览</a></li>\
-                                        <li><a target="blank" href="http://douban.fm/">豆瓣电台</a></li>\
+                                        <li><a href="http://music.douban.com/mine">我的音乐</a></li>\
+                                        <li><a target="blank" href="http://douban.fm/">豆瓣FM</a></li>\
                                     </ul>\
                                 </li>\
                                 <li name="Monkey-Nav-location">\
