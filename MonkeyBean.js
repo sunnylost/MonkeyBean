@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           MonkeyBean
 // @namespace      sunnylost
-// @version        0.22
+// @version        0.6
 // @include        http://*.douban.com/*
 // @require http://userscript-autoupdate-helper.googlecode.com/svn/trunk/autoupdatehelper.js
 /* @reason
@@ -11,7 +11,7 @@
 typeof Updater != 'undefined' && new Updater({
     name: "MonkeyBean",
     id: "124760",
-    version:"0.22"
+    version:"0.6"
 }).check();
 
 /**
@@ -42,6 +42,8 @@ typeof Updater != 'undefined' && new Updater({
 
         DATA_SPLITER : '[-]',  //monkey-data中的分隔符
 
+        DOUBAN_MAINPAGE : 'http://www.douban.com/',  //豆瓣主页
+
         MODULE_NAME_PREFIX : 'MonkeyBean.Module.',
 
         HIGHLIGHT_COLOR : '#46A36A' , //高亮用户发言的颜色
@@ -51,21 +53,10 @@ typeof Updater != 'undefined' && new Updater({
         USER_LOCATION : 'monkey.location'
     };
 
-    var cName = 'monkey.username',
-        cLocation = 'monkey.location',
-        dataSpliter = '[-]',  //monkey-data中的分隔符
-        moduleNamePrefix = 'MonkeyBean.Module.',
-        apiCount = 'MonkeyBean.API.count',
-        apiLastTime = 'MonkeyBean.API.lastTime',
-
-        cHighLightColor = '#46A36A',  //高亮用户发言的颜色
-        cBlankStr = '',                 //空白字符串
-
-        hasOwn = Object.prototype.hasOwnProperty,
+    var hasOwn = Object.prototype.hasOwnProperty,
 
         mine = /\/mine/,
         people = /\/people\/(.*)\//,
-
         //快捷键对应的code
         keyCode = {
             'enter' : 13
@@ -157,7 +148,7 @@ typeof Updater != 'undefined' && new Updater({
 
     var MonkeyBean = {
         author : 'sunnylost',
-        updateTime : '20120213',
+        updateTime : '20120225',
         password : 'Ooo! Ooo! Aaa! Aaa! :(|)',
 
         path : location.hostname + location.pathname,
@@ -177,16 +168,6 @@ typeof Updater != 'undefined' && new Updater({
 
         //TODO,使用豆瓣API有限制，每个IP每分钟10次，如果加上key的话是每分钟40次，如果超过限制会被封IP，因此要记录调用API次数及其间隔。
         useAPI : function() {
-            var count = this.get(apiCount),
-                lastTime = this.get(apiLastTime);
-
-            if(count === undefined && lastTime === undefined) {
-                //第一次使用
-                this.set(apiCount, 1);
-                this.set(apiLastTime, new Date);
-            } else {
-                typeof +count === 'number' && this.set(apiCount, +count + 1);
-            }
         },
 
         getUserInfo : function(nickName) {
@@ -208,6 +189,15 @@ typeof Updater != 'undefined' && new Updater({
         init : function() {
             //this.trigger('load');
             this.MonkeyModuleManager.turnOn();
+        },
+        //判断当前页面类型，是否为读书、电影、音乐等等，目前用于为导航栏增加当前页面提示，其中，9点、阿尔法城和fm没有导航栏，不必考虑
+        pageType : function() {
+            var type = '',
+                normalType = /(www|book|movie|music)\.douban\.com\//;
+            type = this.path.replace(normalType, '$1');
+
+            console.log('TYPE====' + type);
+            return type.indexOf('douban.com') != -1 ? 'location' : type;
         },
 
         //是否登录
@@ -260,8 +250,6 @@ typeof Updater != 'undefined' && new Updater({
     };
     var log = MonkeyBean.log;
     MonkeyBean.TM = MonkeyBean.MonkeyModuleManager;
-
-    log('---------' + MonkeyBean.userId());
 
     var cusEvents = {
         subscribers : {
@@ -366,6 +354,50 @@ typeof Updater != 'undefined' && new Updater({
     $.extend(MonkeyBean, cusEvents);
     $.extend(MonkeyModule.prototype, cusEvents);
 
+
+
+    var userName = MonkeyBean.get(MonkeyBeanConst.USER_NAME),
+
+        userLocation = MonkeyBean.get(MonkeyBeanConst.USER_LOCATION);
+
+    //log(userName);
+    //log(userLocation);
+
+    //GM_deleteValue(cName);
+        log('username=' + userName);
+        //获得用户ID与地址
+        (function () {
+            if (!userName) {
+                GM_xmlhttpRequest({
+                    method:'GET',
+                    url:'http://www.douban.com/mine',
+                    onload:function (resp) {
+                        //没有cookie~会自动跳转到登录页面
+                        if (location.href.indexOf('www.douban.com/accounts/login') != -1) return;
+                        //响应头部信息中，包含了最终的url，其中就有用户名
+                        var arr = resp.finalUrl.split('/');
+                        userName = arr[arr.length - 2];
+                        MonkeyBean.set(MonkeyBeanConst.USER_NAME, userName);
+                        log('2222' + MonkeyBeanConst.USER_NAME + '=' + MonkeyBean.get(MonkeyBeanConst.USER_NAME, ''));
+                    }
+                })
+            }
+
+            if (!userLocation) {
+                GM_xmlhttpRequest({
+                    method:'GET',
+                    url:'http://www.douban.com/location',
+                    onload:function (resp) {
+                        if (location.href.indexOf('www.douban.com/accounts/login') != -1) return;
+                        //响应头部信息中，包含了最终的url，其中就有地址
+                        var arr = trim(resp.finalUrl).split('.');
+                        userLocation = arr[0].slice(7);
+                        MonkeyBean.set(MonkeyBeanConst.USER_LOCATION, userLocation);
+                    }
+                })
+            }
+        })()
+
     /**
      * MonkeyBean配置模块
      */
@@ -437,10 +469,20 @@ typeof Updater != 'undefined' && new Updater({
      */
     MonkeyModule('reply', {
         css : '#Monkey-ReplyForm{\
+                -moz-border-bottom-colors: none;\
+                -moz-border-image: none;\
+                -moz-border-left-colors: none;\
+                -moz-border-right-colors: none;\
+                -moz-border-top-colors: none;\
+                background-color: #FFFFFF;\
+                border-color: #ACACAC #ACACAC #999999;\
+                border-style: solid;\
+                border-width: 1px;\
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);\
+                color: #000000;\
+                outline: 0 none;\
+                z-index: 1101;\
                 display : none;\
-                background: none repeat scroll 0 0 #FFFFFF;\
-                border: 1px solid #D8D8D8;\
-                box-shadow: 0 0 4px rgba(0, 0, 0, 0.23);\
                 height : 320px;\
                 width : 350px;\
                 position: fixed;\
@@ -570,11 +612,11 @@ typeof Updater != 'undefined' && new Updater({
         reply : function(data, el) {
             var form = MonkeyBean.TM.get('reply');
             form.show();
-            form.setContent('@' + data.split(dataSpliter)[1] + '\n');
+            form.setContent('@' + data.split(MonkeyBeanConst.DATA_SPLITER)[1] + '\n');
         },
         //引用用户发言
         quote : function(data) {
-            var commentId = data.split(dataSpliter)[2],
+            var commentId = data.split(MonkeyBeanConst.DATA_SPLITER)[2],
                 comment = null,
                 quoteHeader = '',
                 quoteContent = '',
@@ -595,22 +637,22 @@ typeof Updater != 'undefined' && new Updater({
                 tmp = null;
             while(len--) {
                 tmp = items.eq(len);
-                tmp.attr('monkey-sign') != data.split(dataSpliter)[0] && tmp.hide();
+                tmp.attr('monkey-sign') != data.split(MonkeyBeanConst.DATA_SPLITER)[0] && tmp.hide();
             }
         },
         //高亮该用户所有发言
         highlight : function(data) {
-            var items = $('[monkey-sign=' + data.split(dataSpliter)[0] + ']'),
+            var items = $('[monkey-sign=' + data.split(MonkeyBeanConst.DATA_SPLITER)[0] + ']'),
                 len = items.length,
                 tmpColor = '';
-            tmpColor = (this.clicked = !this.clicked) ? cHighLightColor : cBlankStr;
+            tmpColor = (this.clicked = !this.clicked) ? MonkeyBeanConst.HIGHLIGHT_COLOR : MonkeyBeanConst.BLANK_STR;
             while(len--) {
                 items.eq(len).css('backgroundColor', tmpColor);
             }
         },
         //忽略该用户所有发言
         ignore : function(data) {
-            var items = $('[monkey-sign=' + data.split(dataSpliter)[0] + ']'),
+            var items = $('[monkey-sign=' + data.split(MonkeyBeanConst.DATA_SPLITER)[0] + ']'),
                 len = items.length;
             while(len--) {
                 items.eq(len).hide();
@@ -625,7 +667,7 @@ typeof Updater != 'undefined' && new Updater({
             while(len--) {
                 tmp = items.eq(len);
                 tmp.show();
-                tmp.css('backgroundColor', cBlankStr);
+                tmp.css('backgroundColor', MonkeyBeanConst.BLANK_STR);
             }
         }
     };
@@ -705,13 +747,12 @@ typeof Updater != 'undefined' && new Updater({
      * 适用页面：个人主页与留言板页
      * updateTime : 2012-2-19
      */
-        //TODO:尚未完成，豆瓣助手在firefox也无法提交到别人的留言板，这个问题推迟解决
-
+        //TODO:未完成
     MonkeyModule('MonkeyMessageBoard', {
         //TODO：<span class="gact">
         html:{
             'doumail' : '&nbsp; &nbsp; <a href="/doumail/write?to={1}">回豆邮</a>',
-            'reply' : '&nbsp; &nbsp; <a href="JavaScript:void(0);" monkey-data="{1}' + dataSpliter + '{2}" title="回复到对方留言板">回复</a>',
+            'reply' : '&nbsp; &nbsp; <a href="JavaScript:void(0);" monkey-data="{1}' + MonkeyBeanConst.DATA_SPLITER + '{2}" title="回复到对方留言板">回复</a>',
             'form' : '<form style="margin-bottom:12px" id="fboard" method="post" name="bpform">\
                          <div style="display:none;"><input type="hidden" value="' + MonkeyBean.getCk() + '" name="ck"></div>\
                          <textarea style="width:97%;height:50px;margin-bottom:5px" name="bp_text"></textarea>\
@@ -765,7 +806,7 @@ typeof Updater != 'undefined' && new Updater({
 
         //TODO:点击回复按钮时，应该可以回复到对方留言板
         reply : function (userMsg) {
-            var tmpArr = userMsg.split(dataSpliter);
+            var tmpArr = userMsg.split(MonkeyBeanConst.DATA_SPLITER);
             this.form.find('[type="submit"]').val('回复到的' + tmpArr[1] + '的留言板');
             this.form.attr('action', 'http://www.douban.com/people/' + tmpArr[0] + '/board');
             this.resetBtn.css('display', 'block');
@@ -779,72 +820,182 @@ typeof Updater != 'undefined' && new Updater({
     });
 
 
-    //TODO 猴子导航栏——用于显示顶部导航栏的二级菜单
+    /**
+     * 猴子导航栏——用于显示顶部导航栏的二级菜单
+     * updateTime : 2012-2-25
+     */
     MonkeyModule('MonkeyNavigator', {
-        css : '#_monkey_secondNav{\
-                    display:block;width:600px;\
+        css : '.Monkey-Nav{\
+                  display:block;\
+                  float: left;\
+                  font-size: 12px;\
               }\
-              #_monkey_secondNav ul{\
-                    position:relative;\
-                    z-index:5;\
+              .Monkey-Nav ul, .Monkey-Nav li {\
+                  margin : 0;\
+                  padding : 0;\
               }\
-              #_monkey_secondNav ul li{\
-                    float:none;\
+              .Monkey-Nav ul li ul li {\
+                  text-align : center;\
+                  width : 60px;\
+              }\
+              .Monkey-Nav:after .Monkey-Nav li ul:after{\
+                  clear: both;\
+                  content: " ";\
+                  display: block;\
+                  height: 0;\
+              }\
+              .Monkey-Nav ul li{\
+                   float : left;\
+                   height : 26px;\
+                   line-height : 26px;\
+                   width : 60px;\
+                   position : relative;\
+                   padding : 0;\
+              }\
+              .Monkey-Nav ul li ul {\
+                  position : absolute;\
+                  top : 26px;\
+                  left : -5px;\
+                  width : 60px;\
+                  background-color : #E9F4E9;\
+                  z-index : 100;\
+                  display : none;\
+              }\
+              .Monkey-Nav ul li:hover ul {\
+                  display : block;\
+              }\
+              .Monkey-Nav ul li ul a:hover {\
+                  background-color : #0C7823;\
+                  padding : 0 5px;\
+                  color : #fff;\
+              }\
+              .Monkey-Nav li ul li {\
+                  float: none;\
+                  height: 26px;\
+                  line-height: 26px;\
+                  padding : 0;\
               }',
 
+        html:'<div class="top-nav">\
+                   <div class="bd">\
+                       <div class="top-nav-info">\
+                            <a href="http://www.douban.com/doumail/">豆邮</a>\
+                            <a href="http://www.douban.com/accounts/" target="_blank">便型金刚的帐号</a>\
+                            <a href="http://www.douban.com/accounts/logout?ck=9P95">退出</a>\
+                       </div>\
+                       <div class="Monkey-Nav">\
+                            <ul>\
+                                <li name="Monkey-Nav-mine">\
+                                    <a href="http://www.douban.com/mine">我的豆瓣</a>\
+                                    <ul>\
+                                        <li><a href="http://www.douban.com/people/' + userName + '/notes">日记</a></li>\
+                                        <li><a href="http://www.douban.com/people/' + userName + '/photos">相册</a></li>\
+                                        <li><a href="http://www.douban.com/mine/discussions">讨论</a></li>\
+                                        <li><a href="http://www.douban.com/people/' + userName + '/recs">推荐</a></li>\
+                                        <li><a href="http://www.douban.com/people/' + userName + '/favorites">喜欢</a></li>\
+                                        <li><a href="http://www.douban.com/people/' + userName + '/miniblogs">广播</a></li>\
+                                        <li><a href="http://www.douban.com/people/' + userName + '/offers">二手</a></li>\
+                                        <li><a href="http://www.douban.com/mine/doulists">豆列</a></li>\
+                                        <li><a href="http://www.douban.com/people/' + userName + '/board">留言板</a></li>\
+                                        <li><a href="http://www.douban.com/settings/">设置</a></li>\
+                                    </ul>\
+                                </li>\
+                                <li name="Monkey-Nav-www">\
+                                    <a href="http://www.douban.com/">豆瓣社区</a>\
+                                    <ul>\
+                                        <li><a href="http://www.douban.com/">豆瓣猜</a></li>\
+                                        <li><a href="http://www.douban.com/update/">友邻广播</a></li>\
+                                        <li><a href="http://www.douban.com/mine/">我的豆瓣</a></li>\
+                                        <li><a href="http://www.douban.com/group/">我的小组</a></li>\
+                                        <li><a href="http://www.douban.com/site/">我的小站</a></li>\
+                                    </ul>\
+                                </li>\
+                                <li name="Monkey-Nav-book">\
+                                    <a href="http://book.douban.com/">豆瓣读书</a>\
+                                    <ul>\
+                                        <li><a href="http://book.douban.com/mine">我读</a></li>\
+                                        <li><a href="http://book.douban.com/recommended">豆瓣猜</a></li>\
+                                        <li><a href="http://book.douban.com/chart">排行榜</a></li>\
+                                        <li><a href="http://book.douban.com/tag/">分类浏览</a></li>\
+                                        <li><a href="http://book.douban.com/review/best/">书评</a></li>\
+                                        <li><a href="http://book.douban.com/cart">购书单</a></li>\
+                                    </ul>\
+                                </li>\
+                                <li name="Monkey-Nav-movie">\
+                                    <a href="http://movie.douban.com/">豆瓣电影</a>\
+                                    <ul>\
+                                        <li><a href="http://movie.douban.com/tv">电视剧</a></li>\
+                                        <li><a href="http://movie.douban.com/mine">我看</a></li>\
+                                        <li><a href="http://movie.douban.com/chart">排行榜</a></li>\
+                                        <li><a href="http://movie.douban.com/tag/">分类浏览</a></li>\
+                                        <li><a href="http://movie.douban.com/review/best/">热评</a></li>\
+                                    </ul>\
+                                </li>\
+                                <li name="Monkey-Nav-music">\
+                                    <a href="http://music.douban.com/">豆瓣音乐</a>\
+                                    <ul>\
+                                        <li><a href="http://music.douban.com/mine">我的音乐</a></li>\
+                                        <li><a href="http://music.douban.com/artists/">音乐人</a></li>\
+                                        <li><a href="http://music.douban.com/chart">排行榜</a></li>\
+                                        <li><a href="http://music.douban.com/tag/">分类浏览</a></li>\
+                                        <li><a target="blank" href="http://douban.fm/">豆瓣电台</a></li>\
+                                    </ul>\
+                                </li>\
+                                <li name="Monkey-Nav-location">\
+                                    <a href="http://www.douban.com/location/">豆瓣同城</a>\
+                                    <ul>\
+                                        <li><a href="http://www.douban.com/events">同城活动</a></li>\
+                                        <li><a href="http://' + userLocation + '.douban.com/hosts">主办方</a></li>\
+                                        <li><a href="http://www.douban.com/location/mine">我的同城</a></li>\
+                                    </ul>\
+                                </li>\
+                                <li name="Monkey-Nav-fm">\
+                                    <a target="_blank" href="http://douban.fm/">豆瓣FM</a>\
+                                    <ul>\
+                                        <li><a href="http://douban.fm/mine" target="_blank">我的电台</a></li>\
+                                        <li><a href="http://douban.fm/app" target="_blank">应用下载</a></li>\
+                                    </ul>\
+                                </li>\
+                                <li name="Monkey-Nav-9">\
+                                    <a target="_blank" href="http://9.douban.com">九点</a>\
+                                    <ul>\
+                                        <li><a href="http://9.douban.com/channel/culture">文化</a></li>\
+                                        <li><a href="http://9.douban.com/channel/life">生活</a></li>\
+                                        <li><a href="http://9.douban.com/channel/fun">趣味</a></li>\
+                                        <li><a href="http://9.douban.com/channel/technology">科技</a></li>\
+                                        <li><a href="http://9.douban.com/reader/">我的订阅</a></li>\
+                                    </ul>\
+                                </li>\
+                                <li name="Monkey-Nav-alphatown">\
+                                    <a target="_blank" href="http://alphatown.com/">阿尔法城</a>\
+                                </li>\
+                            </ul>\
+                       </div>\
+                    </div>\
+                </div>',
+
+        el : $('div.top-nav'),
+
         load : function() {
-            return false;
             //在未登录的状态下，首页不显示导航栏
-            if(window.location.href == monkeyMirror.doubanMainPage && !nuts.isLogin()) return false;
+            if(window.location.href == MonkeyBeanConst.DOUBAN_MAINPAGE && !MonkeyBean.isLogin()) return false;
 
+            this.render(MonkeyBean.pageType());
+            return false;
+        },
+
+        render : function(type) {
+            log('PAGETYPE====' + type);
             GM_addStyle(this.css);
-
-            var nav = nuts.query('.top-nav-items'),
-                navs = nuts.queryAll('li', nav),
-                ul = nuts.query('ul', nav),
-                li = document.createElement('li'),
-                i = 0,
-                len = navs.length,
-                tmpDiv,
-                content;
-
-            if(len < 1) return;
-
-            //如果用户名已登录，则显示"我的豆瓣"
-            if(nuts.isLogin()) {
-                li.innerHTML = monkeyMirror.myDouban;
-                ul.insertBefore(li, ul.children[0]);
-            }
-
-            tmpDiv = div.cloneNode(true);
-            tmpDiv.id = '_monkey_secondNav';
-            tmpDiv.innerHTML = monkeyMirror.secondNav.replace('{1}', userLocation || 'www');
-            nav.appendChild(tmpDiv);
-
-            delegate(nuts.query('ul', nav), 'a', 'mouseover', function(e) {
-                if(trim(this.textContent) == '更多') return;  //忽略"更多"的鼠标事件
-                var current = nuts.query('#' + this.textContent);
-                //if(this.parentNode.className.indexOf('on') != -1) return;  //不会显示当前栏目的第二级菜单
-                show(current, 'inline-block');
-                if(monkeyNav.last != current) {
-                    hide(monkeyNav.last);
-                    monkeyNav.last = current;
-                }
-            })
-
-            content = nuts.query('#content');
-            if(content) {
-                content.addEventListener('mouseover', function() {
-                    hide(monkeyNav.last);
-                });
-            }
+            this.el.replaceWith(this.html);
+            $('[name=Monkey-Nav-' + type + ']').addClass('on');
         }
     });
 
 
     /**
      * 楼主工具条——依赖于下面的回复增强模块
-     * updateTime：2012-2-21
+     * updateTime：2012-2-25
      */
     MonkeyModule('MonkeyPosterToolbar', {
         html : '<div style="margin-bottom:10px;font-size: 14px;">\
@@ -883,14 +1034,14 @@ typeof Updater != 'undefined' && new Updater({
 
         render : function() {
             log(this.el[1]);
-            this.el[1] && (this.el[1].prepend(this.html.replace('{1}', this.get('posterId') + dataSpliter + this.get('posterNickName'))));
+            this.el[1] && (this.el[1].prepend(this.html.replace('{1}', this.get('posterId') + MonkeyBeanConst.DATA_SPLITER + this.get('posterNickName'))));
         }
     });
 
     /**
      * 猴子回复增强模块，适用于小组回复，书籍影视评论等，功能包括楼层数显示。
      * 我忍不住要吐槽啦！为啥豆瓣很多页面功能类似，html结构全完全不同！搞啥啊……
-     * updateTime : 2012-2-21
+     * updateTime : 2012-2-25
      */
     MonkeyModule('MonkeyComment', {
         //第一个为小组讨论，第二个为影评书评乐评，第三个为论坛
@@ -1036,7 +1187,7 @@ typeof Updater != 'undefined' && new Updater({
                 //monke-data中保存的数据：用户ID，用户昵称，该条留言的ID
                 //log(this.el[3]);
                 tmp = tmp.find(this.get('commentTool'));
-                tmp.append(this.html.replace('{1}', userId + dataSpliter + nickName + dataSpliter + itemId));
+                tmp.append(this.html.replace('{1}', userId + MonkeyBeanConst.DATA_SPLITER + nickName + MonkeyBeanConst.DATA_SPLITER + itemId));
                 tmp.parent().hover(function() {
                     $(this).find('[name=monkey-commenttool]').css('visibility', 'visible');
                 }, function() {
@@ -1046,212 +1197,82 @@ typeof Updater != 'undefined' && new Updater({
         }
     });
 
+    /**
+     * 猴子相册——增强豆瓣相册浏览
+     * updateTime : 2012-2-25
+     */
+    MonkeyModule('MonkeyPic', {
+
+    });
+
+    /**
+     * 猴子工具条——包括电梯、分页导航栏等等
+     * 整个豆瓣页面仅仅占据全部页面的中间部分，所以悬浮工具条放在右边是比较不错的。
+     * updateTime : 2012-2-25
+     */
+    MonkeyModule('MonkeyToolbar', {
+        css : '#Monkey-Toolbar {\
+                top: 32px;\
+                box-shadow: 0 0 6px #808080;\
+                right: -1px;\
+                position: fixed;\
+                z-index: 90;\
+             }\
+             .Monkey-Toolbar-Text {\
+                 background-color: #F5F5F5;\
+                 background-image: -moz-linear-gradient(center top , #F5F5F5, #F1F1F1);\
+                 border: 1px solid rgba(0, 0, 0, 0.1);\
+                 color: #444444;\
+                 border-radius: 2px 2px 2px 2px;\
+                 cursor: default;\
+                 font-size: 11px;\
+                 font-weight: bold;\
+                 height: 27px;\
+                 line-height: 27px;\
+                 margin-right: 16px;\
+                 min-width: 54px;\
+                 outline: 0 none;\
+                 padding: 0 8px;\
+                 text-align: center;\
+             }',
+
+        html : '<div id="Monkey-Toolbar">\
+                    <span class="Monkey-Toolbar-Text">猴子工具条</span>\
+                </div>',
+
+        load : function() {
+            this.render();
+        },
+
+        render : function() {
+            GM_addStyle(this.css);
+            //$(document.body).append(this.html);
+        }
+    });
+
+    /**
+     * 猴子翻页——通用的翻页工具
+     * updateTime : 2012-2-25
+     */
+    MonkeyModule('MonkeyPageLoader', {
+
+    });
+
+    /**
+     * 个人信息盒子——放置
+     * updateTime : 2012-2-25
+     */
+    MonkeyModule('MonkeyPersonInfoBox', {
+
+    });
+
     /*********************************Module end**************************************************************/
 
-    var userName = MonkeyBean.get(cName, ''),
-        userLocation = MonkeyBean.get(cLocation, ''),
+    var userName = MonkeyBean.get(MonkeyBeanConst.USER_NAME, ''),
+        userLocation = MonkeyBean.get(MonkeyBeanConst.USER_LOCATION, ''),
         guid = 0;
     log('test debug Mode');
-//log(userName);
-//log(userLocation);
 
-//GM_deleteValue(cName);
-    log('username=' + userName);
-    //获得用户ID与地址
-    (function () {
-        if (!userName) {
-            GM_xmlhttpRequest({
-                method:'GET',
-                url:'http://www.douban.com/mine',
-                onload:function (resp) {
-                    //没有cookie~会自动跳转到登录页面
-                    if (location.href.indexOf('www.douban.com/accounts/login') != -1) return;
-                    //响应头部信息中，包含了最终的url，其中就有用户名
-                    var arr = resp.finalUrl.split('/');
-                    userName = arr[arr.length - 2];
-                    MonkeyBean.set(cName, userName);
-                    log('2222' + cName + '=' + MonkeyBean.get(cName, ''));
-                }
-            })
-        }
-
-        if (!userLocation) {
-            GM_xmlhttpRequest({
-                method:'GET',
-                url:'http://www.douban.com/location',
-                onload:function (resp) {
-                    if (location.href.indexOf('www.douban.com/accounts/login') != -1) return;
-                    //响应头部信息中，包含了最终的url，其中就有地址
-                    var arr = trim(resp.finalUrl).split('.');
-                    userLocation = arr[0].slice(7);
-                    MonkeyBean.set(cLocation, userLocation);
-                }
-            })
-        }
-    })()
-
-    //猴镜——模版
-    var monkeyMirror = {
-        'doubanMainPage' : 'http://www.douban.com/',
-
-        'secondNav' : '<ul id="我的豆瓣" style="display:none;">\
-                        <li><a href="http://www.douban.com/people/' + userName + '/notes">日记</a></li>\
-                        <li><a href="http://www.douban.com/people/' + userName + '/photos">相册</a></li>\
-                        <li><a href="http://www.douban.com/mine/discussions">讨论</a></li>\
-                        <li><a href="http://www.douban.com/people/' + userName + '/recs">推荐</a></li>\
-                        <li><a href="http://www.douban.com/people/' + userName + '/favorites">喜欢</a></li>\
-                        <li><a href="http://www.douban.com/people/' + userName + '/miniblogs">广播</a></li>\
-                        <li><a href="http://www.douban.com/people/' + userName + '/offers">二手</a></li>\
-                        <li><a href="http://www.douban.com/mine/doulists">豆列</a></li>\
-                        <li><a href="http://www.douban.com/people/' + userName + '/board">留言板</a></li>\
-                        <li><a href="http://www.douban.com/settings/">设置</a></li>\
-                    </ul>\
-                    <ul id="豆瓣社区" style="display:none;">\
-                        <li><a href="http://www.douban.com/mine/">我的豆瓣</a></li>\
-                        <li><a href="http://www.douban.com/group/mine">小组分类</a></li>\
-                        <li><a href="http://www.douban.com/group/">我的小组</a></li>\
-                        <li><a href="http://www.douban.com/group/my_topics">我发起的话题</a></li>\
-                        <li><a href="http://www.douban.com/group/my_replied_topics">我回应的话题</a></li>\
-                        <li><a href="http://www.douban.com/event/">同城</a></li>\
-                        <li><a href="http://www.douban.com/explore/">浏览发现</a></li>\
-                    </ul>\
-                    <ul id="豆瓣读书" style="display:none;">\
-                        <li><a href="http://book.douban.com/mine">我读</a></li>\
-                        <li><a href="http://book.douban.com/recommended">豆瓣猜</a></li>\
-                        <li><a href="http://book.douban.com/chart">排行榜</a></li>\
-                        <li><a href="http://book.douban.com/tag/">分类浏览</a></li>\
-                        <li><a href="http://book.douban.com/review/best/">书评</a></li>\
-                        <li><a href="http://book.douban.com/cart">购书单</a></li>\
-                    </ul>\
-                    <ul id="豆瓣电影" style="display:none;">\
-                        <li><a href="http://movie.douban.com/tv">电视剧</a></li>\
-                        <li><a href="http://movie.douban.com/mine">我看</a></li>\
-                        <li><a href="http://movie.douban.com/chart">排行榜</a></li>\
-                        <li><a href="http://movie.douban.com/tag/">分类浏览</a></li>\
-                        <li><a href="http://movie.douban.com/review/best/">热评</a></li>\
-                    </ul>\
-                    <ul id="豆瓣音乐" style="display:none;">\
-                        <li><a href="http://music.douban.com/mine">我的音乐</a></li>\
-                        <li><a href="http://music.douban.com/artists/">音乐人</a></li>\
-                        <li><a href="http://music.douban.com/chart">排行榜</a></li>\
-                        <li><a href="http://music.douban.com/tag/">分类浏览</a></li>\
-                        <li><a target="blank" href="http://douban.fm/">豆瓣电台</a></li>\
-                    </ul>\
-                    <ul id="豆瓣同城" style="display:none;">\
-                        <li><a href="http://www.douban.com/events">同城活动</a></li>\
-                        <li><a href="http://' + GM_getValue('monkey.location') + '.douban.com/hosts">主办方</a></li>\
-                        <li><a href="http://www.douban.com/location/mine">我的同城</a></li>\
-                    </ul>\
-                    <ul id="九点" style="display:none;">\
-                        <li><a href="http://9.douban.com/channel/culture">文化</a></li>\
-                        <li><a href="http://9.douban.com/channel/life">生活</a></li>\
-                        <li><a href="http://9.douban.com/channel/fun">趣味</a></li>\
-                        <li><a href="http://9.douban.com/channel/technology">科技</a></li>\
-                        <li><a href="http://9.douban.com/reader/">我的订阅</a></li>\
-                    </ul>\
-                    <ul id="豆瓣FM" style="display:none;">\
-                        <li><a href="http://douban.fm/mine" target="_blank">我的电台</a></li>\
-                        <li><a href="http://douban.fm/app" target="_blank">应用下载</a></li>\
-                    </ul>',
-
-        'myDouban' : '<a href="http://www.douban.com/people/' + userName + '/">我的豆瓣</a>',
-
-        //浮动工具条
-        'floatToolbar' : '<div>\
-                                <label for="monkey_elevator">跳转楼层</label>\
-                                <input type="text" name="monkey_elevator">\
-                            </div>',
-
-        'searchBar' : '<div id="db_scr_btm" title="双击：立即搜索；单击：选择搜索范围">\
-                            <div class="db_scr_btm">综合</div>\
-                            <div class="db_scr_btm">社区</div>\
-                            <div class="db_scr_btm">读书</div>\
-                            <div class="db_scr_btm">电影</div>\
-                            <div class="db_scr_btm">音乐</div>\
-                            <input type="hidden" value="" name="cat">\
-                        </div>'
-    };
-    /**
-     //猴子浮动工具条，整合多个工具，例如楼层跳转等
-     var monkeyFloatToolbar = new MonkeyModule('floatToolbar', {
-     css : '',
-     load : function() {
-     GM_addStyle(this.css);
-
-     var toolbar = div.cloneNode(true);
-     toolbar.id = 'monkey_float_toolbar';
-     },
-     /**
-     * 电梯，跳转到相应楼层
-     * @param num 楼层数
-     *
-     * input 设置只能输入数字
-     * 楼层数在其他页？
-     */
-    /**
-     elevator : (function() {
-     //以下代码只适用于没有经过翻页的页面
-     var to, first, last;
-
-     to = function(num) {
-     var floor = pageParam.floor,
-     start = pageParam.floorStart;
-     if(!floor || num <= start) return;
-     num = num - start;
-     floor[num] && floor[num].scrollIntoView();
-     };
-
-     first = function() {
-     to(pageParam.floorStart + 1);
-     };
-
-     last = function() {
-     to(pageParam.floor.length + pageParam.floorStart);
-     };
-
-
-     return {
-     to : to,
-     first : first,
-     last : last
-     }
-     })()
-     });
-
-     /**
-     //增强搜索栏——代码来源于豆瓣助手
-     var monkeySearchBar = new MonkeyModule('search', {
-     css : '.db_scr_btm{background:#E9F4E9;color:#0C7823;cursor:pointer;display:none;float:left;text-align:center;position:relative;width:19%;border-left:1px solid #E9F4E9;border-right:1px solid #E9F4E9;} .db_scr_btm:hover{position:relative;top:-1px;border-bottom:1px solid #a6d098;border-left:1px solid #a6d098;border-right:1px solid #a6d098;background:#fff;} .nav-srh:hover .db_scr_btm{display:block;}',
-     load : function() {
-     var form = nuts.query('form[name=ssform]'),
-     spans = nuts.queryAll('span', form),
-     cat;
-     if(spans && spans.length > 1) {
-     GM_addStyle(this.css);
-     spans[1].innerHTML += monkeyMirror.searchBar;
-     cat = nuts.query('[name=cat]', spans[1]);
-
-     nuts.query('#db_scr_btm').addEventListener('click', function(e){
-     if(!e.target.id){
-     css(nuts.query('.db_scr_btm'), 'cssText', '');
-     e.target.style.cssText = 'position:relative;top:-1px;border-bottom:1px solid #a6d098;border-left:1px solid #a6d098;border-right:1px solid #a6d098;background:#fff;';
-     var n = e.target.innerHTML;
-     n == '综合' && (form.action = 'http://www.douban.com/subject_search') && (cat.value = '');
-     n == '社区' && (form.action = 'http://www.douban.com/search') && (cat.value = '');
-     n == '读书' && (form.action = 'http://book.douban.com/subject_search') && (cat.value = '1001');
-     n == '电影' && (form.action = 'http://movie.douban.com/subject_search') && (cat.value = '1002');
-     n == '音乐' && (form.action = 'http://music.douban.com/subject_search') && (cat.value = '1003');
-     }
-     }, false);
-     nuts.query('#db_scr_btm').addEventListener('dblclick', function(e){
-     if(!e.target.id){
-     form.submit();
-     }
-     }, false);
-     }
-     }
-     });
-     */
     MonkeyBean.init();
 
     log(((new Date()) - startTime)/1000 + '秒');
