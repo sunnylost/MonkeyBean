@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           MonkeyBean
 // @namespace      sunnylost
-// @version        0.61
+// @version        0.65
 // @include        http://*.douban.com/*
 // @require http://userscript-autoupdate-helper.googlecode.com/svn/trunk/autoupdatehelper.js
 /* @reason
@@ -11,7 +11,7 @@
 typeof Updater != 'undefined' && new Updater({
     name: "MonkeyBean",
     id: "124760",
-    version:"0.61"
+    version:"0.65"
 }).check();
 
 /**
@@ -148,7 +148,7 @@ typeof Updater != 'undefined' && new Updater({
 
     var MonkeyBean = {
         author : 'sunnylost',
-        updateTime : '20120226',
+        updateTime : '20120227',
         password : 'Ooo! Ooo! Aaa! Aaa! :(|)',
 
         path : location.hostname + location.pathname,
@@ -1429,7 +1429,7 @@ typeof Updater != 'undefined' && new Updater({
             document.body.appendChild(this.box[0]);
 
             this.box.hover(function() {
-                clearTimeout(this.ID);
+                clearTimeout(that.ID);
                 that.isShown = true;
             }, function() {
                 that.hide();
