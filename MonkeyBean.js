@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           MonkeyBean
 // @namespace      sunnylost
-// @version        0.6
+// @version        0.61
 // @include        http://*.douban.com/*
 // @require http://userscript-autoupdate-helper.googlecode.com/svn/trunk/autoupdatehelper.js
 /* @reason
@@ -11,7 +11,7 @@
 typeof Updater != 'undefined' && new Updater({
     name: "MonkeyBean",
     id: "124760",
-    version:"0.6"
+    version:"0.61"
 }).check();
 
 /**
@@ -513,31 +513,42 @@ typeof Updater != 'undefined' && new Updater({
                 margin : 3px;\
             }\
             .Monkey-Button {\
-                -moz-border-bottom-colors: none;\
-                -moz-border-image: none;\
-                -moz-border-left-colors: none;\
-                -moz-border-right-colors: none;\
-                -moz-border-top-colors: none;\
-                background-color : #B2B2B2;\
-                border-color: #C9C9C9 #B2B2B2 #9A9A9A;\
-                border-left: 1px solid #B2B2B2;\
+                background-color: #3FA156;\
+                border: 1px solid #528641;\
                 border-radius: 3px 3px 3px 3px;\
-                border-right: 1px solid #B2B2B2;\
-                border-style: solid;\
-                border-width: 1px;\
-                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);\
-                color: #333333;\
+                color: #FFFFFF;\
                 cursor: pointer;\
-                font-size: 11px;\
-                font-weight: bold;\
                 height: 25px;\
-                line-height: 11px;\
                 padding: 5px 10px 6px;\
-                text-align: center;\
-                text-shadow: 0 1px 1px #EEEEEE;\
             }\
             .Monkey-Button:hover {\
-                background-color : #9A9A9A;\
+                background-color: #4FCA6C;\
+                border-color: #6AAD54;\
+            }\
+            .Monkey-Button-flat {\
+                border-color: #BBBBBB #BBBBBB #999999;\
+                border-radius: 3px 3px 3px 3px;\
+                border-style: solid;\
+                border-width: 1px;\
+                color: #444444;\
+                display: inline-block;\
+                overflow: hidden;\
+                vertical-align: middle;\
+            }\
+            .Monkey-Button-flat input {\
+                background-image: -moz-linear-gradient(-90deg, #FCFCFC 0pt, #E9E9E9 100%);\
+                border: 0 none;\
+                border-radius: 2px 2px 2px 2px;\
+                color: #333333;\
+                cursor: pointer;\
+                font-size: 12px;\
+                height: 25px;\
+                margin: 0 !important;\
+                padding: 0 14px;\
+            }\
+            .Monkey-Button-flat:hover {\
+                border-color: #999999 #999999 #666666;\
+                color: #333333;\
             }',
 
         html : '<div id="Monkey-ReplyForm">\
@@ -551,8 +562,12 @@ typeof Updater != 'undefined' && new Updater({
                         </div>\
                         <div id="Monkey-ReplyToolbox">\
                             <input value="加上去" type="submit" monkey-action="submit" class="Monkey-Button">\
-                            <input value="清空" type="button" monkey-action="reset" class="Monkey-Button">\
-                            <input value="取消" type="button" monkey-action="cancel" class="Monkey-Button">\
+                            <span class="Monkey-Button-flat">\
+                                <input value="清空" type="button" monkey-action="reset" class="Monkey-Button-flat">\
+                            </span>\
+                            <span class="Monkey-Button-flat">\
+                                <input value="取消" type="button" monkey-action="cancel" class="Monkey-Button-flat">\
+                            </span>\
                         </div>\
                     </form>\
                 </div>',
@@ -831,6 +846,7 @@ typeof Updater != 'undefined' && new Updater({
                   font-size: 12px;\
               }\
               .Monkey-Nav ul, .Monkey-Nav li {\
+                  text-align : center;\
                   margin : 0;\
                   padding : 0;\
               }\
@@ -855,7 +871,6 @@ typeof Updater != 'undefined' && new Updater({
               .Monkey-Nav ul li ul {\
                   position : absolute;\
                   top : 26px;\
-                  left : -5px;\
                   width : 60px;\
                   background-color : #E9F4E9;\
                   z-index : 100;\
@@ -1263,11 +1278,103 @@ typeof Updater != 'undefined' && new Updater({
     });
 
     /**
-     * 个人信息盒子——放置
-     * updateTime : 2012-2-25
+     * 个人信息盒子——为在个人链接上出现一个层，包含对该用户的快捷操作，例如用户的电影、读书、音乐等，还包括加关注和拉入黑名单等等。
+     * updateTime : 2012-2-27
      */
     MonkeyModule('MonkeyPersonInfoBox', {
+        css : '',
 
+        html : '',
+
+        load : function() {
+
+        },
+
+        render : function() {
+
+        }
+    });
+
+    /**
+     * 猴子小组模块——包括隐藏小组介绍、加入小组时的分类选择、小组分类
+     * updateTime : 2012-2-26
+     */
+    MonkeyModule('MonkeyGroup', {
+        css : {
+            'toggle' : '#Monkey-GroupToggle {\
+                          float : right;\
+                          color : #4F946E;\
+                          background-color: #F2F8F2;\
+                          border-color: #E3F1ED;\
+                          padding : 0 8px;\
+                          border-radius : 3px 3px 3px;\
+                          cursor : pointer;\
+                      }\
+                      #Monkey-GroupToggle:hover{\
+                        background-color: #0C7823;\
+                        color: #FFFFFF;\
+                      }'
+        },
+
+        html : {
+            'toggle' : '<span id="Monkey-GroupToggle">\
+                            显示小组介绍\
+                         </span>'
+        },
+
+        fit : function() {
+            var path = MonkeyBean.path,
+                type = /www\.douban\.com\/group\/([^/]*)\/?/,
+                result = '';
+            if(type.test(path)) {
+                result = path.replace(type, '$1');
+                this.set('type', result == 'mine' ? 'sort' : 'toggle');
+                return true;
+            }
+            return false;
+        },
+
+        load : function() {
+            var type = this.get('type');
+            this.render(type);
+        },
+
+        render : function(type) {
+            GM_addStyle(this.css[type]);
+
+            if(type == 'toggle') {
+                var el = $(this.html.toggle),
+                    description = null;
+                $('div.article').prepend(el);
+                this.description = $('div.article').find('div.bd');
+                this.el = el;
+                this.el.clicked = false;
+                this.description.hide();
+
+                el.click($.proxy(this.toggle, this));
+            }
+
+        },
+        /**
+         * 显示/隐藏小组介绍
+         */
+        toggle : function(e) {
+            var flag = (this.el.clicked = !this.el.clicked);
+            if(flag) {
+                this.el.html('隐藏小组介绍');
+                this.description.show();
+            } else {
+                this.el.html('显示小组介绍');
+                this.description.hide();
+            }
+            return true;
+        },
+        /**
+         * 小组分类
+         */
+        sort : function() {
+            return true;
+        }
     });
 
     /*********************************Module end**************************************************************/
