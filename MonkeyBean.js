@@ -148,7 +148,7 @@ typeof Updater != 'undefined' && new Updater({
 
     var MonkeyBean = {
         author : 'sunnylost',
-        updateTime : '20120225',
+        updateTime : '20120226',
         password : 'Ooo! Ooo! Aaa! Aaa! :(|)',
 
         path : location.hostname + location.pathname,
@@ -189,15 +189,6 @@ typeof Updater != 'undefined' && new Updater({
         init : function() {
             //this.trigger('load');
             this.MonkeyModuleManager.turnOn();
-        },
-        //判断当前页面类型，是否为读书、电影、音乐等等，目前用于为导航栏增加当前页面提示，其中，9点、阿尔法城和fm没有导航栏，不必考虑
-        pageType : function() {
-            var type = '',
-                normalType = /(www|book|movie|music)\.douban\.com\/.*/;
-            type = this.path.replace(normalType, '$1');
-
-            console.log('TYPE====' + type);
-            return type.indexOf('douban.com') != -1 ? 'location' : type;
         },
 
         //是否登录
@@ -248,6 +239,18 @@ typeof Updater != 'undefined' && new Updater({
             }
         })()
     };
+    MonkeyBean.pageType = (function() {//判断当前页面类型，是否为读书、电影、音乐等等，目前用于为导航栏增加当前页面提示，其中，9点、阿尔法城和fm没有导航栏，不必考虑
+        var type = '',
+            normalType = /(www|book|movie|music)\.douban\.com\/.*/,
+            group = /www\.douban\.com\/group\/topic\/\d+\/?/;
+        type = MonkeyBean.path.replace(normalType, '$1');
+        if(type.indexOf('douban.com') != -1) {
+            type = group.test(MonkeyBean.path) ? 'group' : 'location';
+        }
+
+        console.log('TYPE====' + type);
+        return type;
+    })();
     var log = MonkeyBean.log;
     MonkeyBean.TM = MonkeyBean.MonkeyModuleManager;
 
@@ -298,7 +301,7 @@ typeof Updater != 'undefined' && new Updater({
         if(this.constructor != MonkeyModule) {
             return new MonkeyModule(name, method);
         }
-        this.guid = guid++;
+        //this.guid = guid++;
         this.name = name;
         $.extend(this, method);
         //this.on = MonkeyBean.get(moduleNamePrefix + name);  //是否启动
@@ -999,7 +1002,7 @@ typeof Updater != 'undefined' && new Updater({
             //在未登录的状态下，首页不显示导航栏
             if(window.location.href == MonkeyBeanConst.DOUBAN_MAINPAGE && !MonkeyBean.isLogin()) return false;
 
-            this.render(MonkeyBean.pageType());
+            this.render(MonkeyBean.pageType);
             return false;
         },
 
@@ -1279,18 +1282,30 @@ typeof Updater != 'undefined' && new Updater({
 
     /**
      * 个人信息盒子——为在个人链接上出现一个层，包含对该用户的快捷操作，例如用户的电影、读书、音乐等，还包括加关注和拉入黑名单等等。
-     * updateTime : 2012-2-27
+     * updateTime : 2012-2-26
      */
     MonkeyModule('MonkeyPersonInfoBox', {
         css : '',
 
         html : '',
 
+        fit : function() {
+
+        },
+
         load : function() {
 
         },
 
         render : function() {
+
+        },
+
+        show : function() {
+
+        },
+
+        hide : function() {
 
         }
     });
@@ -1324,7 +1339,7 @@ typeof Updater != 'undefined' && new Updater({
 
         fit : function() {
             var path = MonkeyBean.path,
-                type = /www\.douban\.com\/group\/([^/]*)\/?/,
+                type = /www\.douban\.com\/group\/([^/]*)\/?$/,
                 result = '';
             if(type.test(path)) {
                 result = path.replace(type, '$1');
@@ -1379,9 +1394,6 @@ typeof Updater != 'undefined' && new Updater({
 
     /*********************************Module end**************************************************************/
 
-    var userName = MonkeyBean.get(MonkeyBeanConst.USER_NAME, ''),
-        userLocation = MonkeyBean.get(MonkeyBeanConst.USER_LOCATION, ''),
-        guid = 0;
     log('test debug Mode');
 
     MonkeyBean.init();
