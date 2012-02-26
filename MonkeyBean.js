@@ -401,6 +401,24 @@ typeof Updater != 'undefined' && new Updater({
             }
         })()
 
+    MonkeyBean.UI = {
+        css : {
+            'button' : '.Monkey-Button {\
+                          color : #4F946E;\
+                          background-color: #F2F8F2;\
+                          border: 1px solid #E3F1ED;\
+                          padding : 0 8px;\
+                          border-radius : 3px 3px 3px;\
+                          cursor : pointer;\
+                      }\
+                      .Monkey-Button:hover{\
+                        background-color: #0C7823;\
+                        border-color: #C4E2D8;\
+                        color: #FFFFFF;\
+                      }'
+        }
+    };
+
     /**
      * MonkeyBean配置模块
      */
@@ -515,7 +533,7 @@ typeof Updater != 'undefined' && new Updater({
                 padding : 2px;\
                 margin : 3px;\
             }\
-            .Monkey-Button {\
+            .Monkey-FormButton {\
                 background-color: #3FA156;\
                 border: 1px solid #528641;\
                 border-radius: 3px 3px 3px 3px;\
@@ -524,11 +542,11 @@ typeof Updater != 'undefined' && new Updater({
                 height: 25px;\
                 padding: 5px 10px 6px;\
             }\
-            .Monkey-Button:hover {\
+            .Monkey-FormButton:hover {\
                 background-color: #4FCA6C;\
                 border-color: #6AAD54;\
             }\
-            .Monkey-Button-flat {\
+            .Monkey-FormButton-flat {\
                 border-color: #BBBBBB #BBBBBB #999999;\
                 border-radius: 3px 3px 3px 3px;\
                 border-style: solid;\
@@ -538,7 +556,7 @@ typeof Updater != 'undefined' && new Updater({
                 overflow: hidden;\
                 vertical-align: middle;\
             }\
-            .Monkey-Button-flat input {\
+            .Monkey-FormButton-flat input {\
                 background-image: -moz-linear-gradient(-90deg, #FCFCFC 0pt, #E9E9E9 100%);\
                 border: 0 none;\
                 border-radius: 2px 2px 2px 2px;\
@@ -549,7 +567,7 @@ typeof Updater != 'undefined' && new Updater({
                 margin: 0 !important;\
                 padding: 0 14px;\
             }\
-            .Monkey-Button-flat:hover {\
+            .Monkey-FormButton-flat:hover {\
                 border-color: #999999 #999999 #666666;\
                 color: #333333;\
             }',
@@ -564,12 +582,12 @@ typeof Updater != 'undefined' && new Updater({
                             </textarea>\
                         </div>\
                         <div id="Monkey-ReplyToolbox">\
-                            <input value="加上去" type="submit" monkey-action="submit" class="Monkey-Button">\
-                            <span class="Monkey-Button-flat">\
-                                <input value="清空" type="button" monkey-action="reset" class="Monkey-Button-flat">\
+                            <input value="加上去" type="submit" monkey-action="submit" class="Monkey-FormButton">\
+                            <span class="Monkey-FormButton-flat">\
+                                <input value="清空" type="button" monkey-action="reset" class="Monkey-FormButton-flat">\
                             </span>\
-                            <span class="Monkey-Button-flat">\
-                                <input value="取消" type="button" monkey-action="cancel" class="Monkey-Button-flat">\
+                            <span class="Monkey-FormButton-flat">\
+                                <input value="取消" type="button" monkey-action="cancel" class="Monkey-FormButton-flat">\
                             </span>\
                         </div>\
                     </form>\
@@ -1017,16 +1035,16 @@ typeof Updater != 'undefined' && new Updater({
 
     /**
      * 楼主工具条——依赖于下面的回复增强模块
-     * updateTime：2012-2-25
+     * updateTime：2012-2-27
      */
     MonkeyModule('MonkeyPosterToolbar', {
         html : '<div style="margin-bottom:10px;font-size: 14px;">\
                     <span monkey-data="{1}">\
-                        &gt;&nbsp;<a href="javascript:void(0);" monkey-action="reply" rel="nofollow" title="回复楼主发言" style="display: inline;margin-left:0;">回复</a>\
-                        &gt;&nbsp;<a href="javascript:void(0);" monkey-action="only" rel="nofollow" title="只看楼主的发言" style="display: inline;margin-left:0;">只看</a>\
-                        &gt;&nbsp;<a href="javascript:void(0);" monkey-action="highlight" rel="nofollow" title="高亮楼主的所有发言" style="display: inline;margin-left:0;">高亮</a>\
-                        &gt;&nbsp;<a href="javascript:void(0);" monkey-action="ignore" rel="nofollow" title="忽略楼主的所有发言" style="display: inline;margin-left:0;">忽略</a>\
-                        &gt;&nbsp;<a href="javascript:void(0);" monkey-action="reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">还原</a>\
+                        <span monkey-action="reply" rel="nofollow" title="回复楼主发言" class="Monkey-Button">回复</span>\
+                        <span monkey-action="only" rel="nofollow" title="只看楼主的发言" class="Monkey-Button">只看</span>\
+                        <span monkey-action="highlight" rel="nofollow" title="高亮楼主的所有发言" class="Monkey-Button">高亮</span>\
+                        <span monkey-action="ignore" rel="nofollow" title="忽略楼主的所有发言" class="Monkey-Button">忽略</span>\
+                        <span monkey-action="reset" rel="nofollow" title="还原到原始状态" class="Monkey-Button">还原</span>\
                     </span>\
                 </div>',
 
@@ -1055,7 +1073,7 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         render : function() {
-            log(this.el[1]);
+            GM_addStyle(MonkeyBean.UI.css.button);
             this.el[1] && (this.el[1].prepend(this.html.replace('{1}', this.get('posterId') + MonkeyBeanConst.DATA_SPLITER + this.get('posterNickName'))));
         }
     });
@@ -1152,7 +1170,7 @@ typeof Updater != 'undefined' && new Updater({
         load : function() {
             //这里注册的事件同样适用于楼主工具条。
             var that = this;
-            $(document.body).delegate('a[monkey-action]', 'click', function() {
+            $(document.body).delegate('[monkey-action]', 'click', function() {
                 var actionName = this.getAttribute('monkey-action');
                 actionName && monkeyCommentToolbox[actionName] && monkeyCommentToolbox[actionName](this.parentNode.getAttribute('monkey-data'), this);
             })
@@ -1281,65 +1299,185 @@ typeof Updater != 'undefined' && new Updater({
     });
 
     /**
-     * 个人信息盒子——为在个人链接上出现一个层，包含对该用户的快捷操作，例如用户的电影、读书、音乐等，还包括加关注和拉入黑名单等等。
-     * updateTime : 2012-2-26
+     * 猴子箱——在个人链接上出现一个层，包含对该用户的快捷操作，例如用户的电影、读书、音乐等，还包括加关注和拉入黑名单等等。
+     * 样式借鉴了知乎：www.zhihu.com
+     * updateTime : 2012-2-27
      */
-    MonkeyModule('MonkeyPersonInfoBox', {
-        css : '',
+    MonkeyModule('MonkeyBox', {
+        css : '#MonkeyBox {\
+                  position : absolute;\
+                  border-radius : 5px;\
+            }\
+            #MonkeyBox .xtb {\
+                border: 1px solid #BBBBBB;\
+            }\
+            #xcd {\
+                background: none repeat scroll 0 0 #FFFFFF;\
+                width: 280px;\
+            }\
+            .xd {\
+                border-radius : 5px;\
+            }\
+            .xye {\
+                background: none repeat scroll 0 0 white;\
+                border: 3px solid #F4F4F4;\
+                padding: 10px;\
+            }\
+            .xsb {\
+                line-height: 18px;\
+                margin: 0 0 0 4px;\
+            }\
+            .xbd {\
+                border-top: 1px solid #E9E9E9;\
+                margin: 5px 0 0;\
+                padding: 10px 0 0;\
+            }\
+            .xuv {\
+                color: #999999 !important;\
+                font-size: 12px;\
+            }\
+            .xjw {\
+                border-radius: 3px 3px 3px 3px;\
+                display: block;\
+                font-size: 12px;\
+                font-weight: normal;\
+                line-height: 18px;\
+                padding: 1px;\
+                text-align: center;\
+                text-decoration: none !important;\
+                width: 52px;\
+            }\
+            .xiw {\
+                background: -moz-linear-gradient(center top , #ADDA4D, #86B846) repeat scroll 0 0 transparent;\
+                border: 1px solid #6D8F29;\
+                box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 1px 0 rgba(0, 0, 0, 0.15);\
+                color: #3E5E00 !important;\
+                text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);\
+            }\
+            .xwv {\
+                float: right;\
+            }\
+            .Monkey-Pointer {\
+                position : absolute;\
+                height : 0;\
+                left : 50px;\
+            }\
+            .Monkey-Pointer-Border {\
+                border: 9px solid;\
+            }\
+            .Monkey-a {\
+                border-color: #BBBBBB transparent transparent;\
+            }\
+            .Monkey-b {\
+                border-color: #FFFFFF transparent transparent;\
+                top: -20px;\
+                position : relative;\
+            }',
 
-        html : '',
+        html : '<div id="MonkeyBox" style="left: 290px; top: 150.5px; display: none;">\
+                    <div class="xd xtb" id="xcd">\
+                        <div class="xd xye">\
+                            <div class="xsb">\
+                                <h1></h1>\
+                                <br>\
+                                <span class="Monkey-Button">日记</span>\
+                                <span class="Monkey-Button">相册</span>\
+                                <span class="Monkey-Button">喜欢</span>\
+                                <span class="Monkey-Button">广播</span>\
+                                <span class="Monkey-Button">豆列</span>\
+                            </div>\
+                            <div class="xbd">\
+                                <a class="xwv xuv" href="/inbox/2738424000">豆邮</a>\
+                                <a class="xjw xiw" data-focustype="people" name="focus" href="javascript:;">关注</a>\
+                            </div>\
+                        </div>\
+                    </div>\
+                    <div class="Monkey-Pointer">\
+                        <div class="Monkey-a Monkey-Pointer-Border"></div>\
+                        <div class="Monkey-b Monkey-Pointer-Border"></div>\
+                    </div>\
+                </div>',
 
         fit : function() {
-
+            return true;
         },
 
         load : function() {
-
+            var that = this,
+                a = $('a');
+            this.people = /^http:\/\/www\.douban\.com\/people\/([^/]+\/$)/;
+            this.render();
+            a.hover(function(e) {
+                var a = $(this);
+                if(that.people.test(this.href) && a.find('img').length == 0) {
+                    that.url = this.href;
+                    that.show($(this).offset(), this.innerHTML);
+                }
+            }, function(e) {
+                log(e.relatedTarget);
+                var flag = $.contains(that.box[0], e.relatedTarget);
+                !flag && that.hide();
+            })
         },
 
         render : function() {
+            var that = this;
+            GM_addStyle(this.css);
+            GM_addStyle(MonkeyBean.UI.css.button);
+            this.box = $(this.html);
+            this.text = this.box.find('h1');
+            document.body.appendChild(this.box[0]);
 
+            this.box.hover(function() {
+                clearTimeout(this.ID);
+                that.isShown = true;
+            }, function() {
+                that.hide();
+            })
         },
 
-        show : function() {
-
+        show : function(position, text) {
+            var that = this;
+            clearTimeout(this.ID);
+            this.ID = setTimeout(function() {
+                that.box.show();
+                that.box.css({
+                    'left' : position.left - 40 + 'px',
+                    'top' : position.top - 160 + 'px'
+                });
+                that.text.text(text);
+                that.isShown = true;
+            }, 500);
         },
 
         hide : function() {
-
+            if(!this.isShown) return;
+            var that = this;
+            clearTimeout(this.ID);
+            this.ID = setTimeout(function() {
+                that.box.fadeOut();
+                that.isShown = false;
+            }, 1000);
         }
     });
 
     /**
      * 猴子小组模块——包括隐藏小组介绍、加入小组时的分类选择、小组分类
-     * updateTime : 2012-2-26
+     * updateTime : 2012-2-27
      */
     MonkeyModule('MonkeyGroup', {
         css : {
-            'toggle' : '#Monkey-GroupToggle {\
-                          float : right;\
-                          color : #4F946E;\
-                          background-color: #F2F8F2;\
-                          border-color: #E3F1ED;\
-                          padding : 0 8px;\
-                          border-radius : 3px 3px 3px;\
-                          cursor : pointer;\
-                      }\
-                      #Monkey-GroupToggle:hover{\
-                        background-color: #0C7823;\
-                        color: #FFFFFF;\
-                      }'
         },
 
         html : {
-            'toggle' : '<span id="Monkey-GroupToggle">\
+            'toggle' : '<span class="Monkey-Button" style="float:right;">\
                             显示小组介绍\
                          </span>'
         },
 
         fit : function() {
             var path = MonkeyBean.path,
-                type = /www\.douban\.com\/group\/([^/]*)\/?$/,
+                type = /www\.douban\.com\/group\/([^/]+)\/?$/,
                 result = '';
             if(type.test(path)) {
                 result = path.replace(type, '$1');
@@ -1355,11 +1493,10 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         render : function(type) {
-            GM_addStyle(this.css[type]);
+            GM_addStyle(MonkeyBean.UI.css.button);
 
             if(type == 'toggle') {
-                var el = $(this.html.toggle),
-                    description = null;
+                var el = $(this.html.toggle);
                 $('div.article').prepend(el);
                 this.description = $('div.article').find('div.bd');
                 this.el = el;
