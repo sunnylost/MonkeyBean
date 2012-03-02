@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name           MonkeyBean
 // @namespace      sunnylost
-// @version        0.65
+// @version        0.7
 // @include        http://*.douban.com/*
 // @require http://userscript-autoupdate-helper.googlecode.com/svn/trunk/autoupdatehelper.js
+// @require http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js
 /* @reason
  @end*/
 // ==/UserScript==
@@ -11,7 +12,7 @@
 typeof Updater != 'undefined' && new Updater({
     name: "MonkeyBean",
     id: "124760",
-    version:"0.65"
+    version:"0.7"
 }).check();
 
 /**
@@ -22,6 +23,8 @@ typeof Updater != 'undefined' && new Updater({
  */
 (function(window, $, undefined) {
     if(window !== window.top) return false;  //防止在iframe中执行
+
+    $ = $ || window.$;
 
     var startTime = new Date();
 
@@ -48,6 +51,34 @@ typeof Updater != 'undefined' && new Updater({
 
         HIGHLIGHT_COLOR : '#46A36A' , //高亮用户发言的颜色
         BLANK_STR : '',                  //空字符串
+
+        SEARCH_INPUT : {    //搜索框选项
+            'www' : {
+                'placeholder' : '成员、小组、音乐人、主办方',
+                'url' : 'http://www.douban.com/search',
+                'cat' : ''
+            },
+            'movie' : {
+                'placeholder' : '电影、影人、影院、电视剧',
+                'url' : 'http://movie.douban.com/subject_search',
+                'cat' : '1002'
+            },
+            'book' : {
+                'placeholder' : '书名、作者、ISBN',
+                'url' : 'http://book.douban.com/subject_search',
+                'cat' : '1001'
+            },
+            'music' : {
+                'placeholder' : '唱片名、表演者、条码、ISRC',
+                'url' : 'http://music.douban.com/subject_search',
+                'cat' : '1003'
+            },
+            'location' : {
+                'placeholder' : '活动名称、地点、介绍',
+                'url' : 'http://www.douban.com/event/search',
+                'cat' : ''
+            }
+        },
 
         USER_NAME : 'monkey.username',
         USER_LOCATION : 'monkey.location'
@@ -148,7 +179,7 @@ typeof Updater != 'undefined' && new Updater({
 
     var MonkeyBean = {
         author : 'sunnylost',
-        updateTime : '20120227',
+        updateTime : '20120303',
         password : 'Ooo! Ooo! Aaa! Aaa! :(|)',
 
         path : location.hostname + location.pathname,
@@ -221,7 +252,6 @@ typeof Updater != 'undefined' && new Updater({
 
             turnOn = function() {
                 var m, tmpModule;
-                //log(moduleTree);
                 for(m in moduleTree) {
                     if(hasOwn.call(moduleTree, m)) {
                         tmpModule = moduleTree[m];
@@ -367,39 +397,39 @@ typeof Updater != 'undefined' && new Updater({
     //log(userLocation);
 
     //GM_deleteValue(cName);
-        log('username=' + userName);
-        //获得用户ID与地址
-        (function () {
-            if (!userName) {
-                GM_xmlhttpRequest({
-                    method:'GET',
-                    url:'http://www.douban.com/mine',
-                    onload:function (resp) {
-                        //没有cookie~会自动跳转到登录页面
-                        if (location.href.indexOf('www.douban.com/accounts/login') != -1) return;
-                        //响应头部信息中，包含了最终的url，其中就有用户名
-                        var arr = resp.finalUrl.split('/');
-                        userName = arr[arr.length - 2];
-                        MonkeyBean.set(MonkeyBeanConst.USER_NAME, userName);
-                        log('2222' + MonkeyBeanConst.USER_NAME + '=' + MonkeyBean.get(MonkeyBeanConst.USER_NAME, ''));
-                    }
-                })
-            }
+    log('username=' + userName);
+    //获得用户ID与地址
+    (function () {
+        if (!userName) {
+            GM_xmlhttpRequest({
+                method:'GET',
+                url:'http://www.douban.com/mine',
+                onload:function (resp) {
+                    //没有cookie~会自动跳转到登录页面
+                    if (location.href.indexOf('www.douban.com/accounts/login') != -1) return;
+                    //响应头部信息中，包含了最终的url，其中就有用户名
+                    var arr = resp.finalUrl.split('/');
+                    userName = arr[arr.length - 2];
+                    MonkeyBean.set(MonkeyBeanConst.USER_NAME, userName);
+                    log('2222' + MonkeyBeanConst.USER_NAME + '=' + MonkeyBean.get(MonkeyBeanConst.USER_NAME, ''));
+                }
+            })
+        }
 
-            if (!userLocation) {
-                GM_xmlhttpRequest({
-                    method:'GET',
-                    url:'http://www.douban.com/location',
-                    onload:function (resp) {
-                        if (location.href.indexOf('www.douban.com/accounts/login') != -1) return;
-                        //响应头部信息中，包含了最终的url，其中就有地址
-                        var arr = trim(resp.finalUrl).split('.');
-                        userLocation = arr[0].slice(7);
-                        MonkeyBean.set(MonkeyBeanConst.USER_LOCATION, userLocation);
-                    }
-                })
-            }
-        })()
+        if (!userLocation) {
+            GM_xmlhttpRequest({
+                method:'GET',
+                url:'http://www.douban.com/location',
+                onload:function (resp) {
+                    if (location.href.indexOf('www.douban.com/accounts/login') != -1) return;
+                    //响应头部信息中，包含了最终的url，其中就有地址
+                    var arr = trim(resp.finalUrl).split('.');
+                    userLocation = arr[0].slice(7);
+                    MonkeyBean.set(MonkeyBeanConst.USER_LOCATION, userLocation);
+                }
+            })
+        }
+    })()
 
     MonkeyBean.UI = {
         css : {
@@ -411,7 +441,11 @@ typeof Updater != 'undefined' && new Updater({
                           border-radius : 3px 3px 3px;\
                           cursor : pointer;\
                       }\
-                      .Monkey-Button:hover{\
+                      .Monkey-Button a {\
+                          color : #4F946E;\
+                          background-color: #F2F8F2;\
+                      }\
+                      .Monkey-Button:hover, .Monkey-Button:hover a {\
                         background-color: #0C7823;\
                         border-color: #C4E2D8;\
                         color: #FFFFFF;\
@@ -771,9 +805,9 @@ typeof Updater != 'undefined' && new Updater({
             if(!this.el) return;
             GM_addStyle(this.css);
             var container = $(this.html.replace(/\{1\}/g, this.get('condition'))
-                                        .replace('{2}', this.get('icon'))
-                                        .replace('{3}', this.get('place'))
-                                        .replace('{4}', this.get('temp')));
+                .replace('{2}', this.get('icon'))
+                .replace('{3}', this.get('place'))
+                .replace('{4}', this.get('temp')));
             container.insertBefore(this.el);
         }
     });
@@ -858,68 +892,195 @@ typeof Updater != 'undefined' && new Updater({
 
     /**
      * 猴子导航栏——用于显示顶部导航栏的二级菜单
-     * updateTime : 2012-2-25
+     * updateTime : 2012-3-3
      */
     MonkeyModule('MonkeyNavigator', {
-        css : '.Monkey-Nav{\
-                  display:block;\
-                  float: left;\
-                  font-size: 12px;\
-              }\
-              .Monkey-Nav ul, .Monkey-Nav li {\
-                  text-align : center;\
-                  margin : 0;\
-                  padding : 0;\
-              }\
-              .Monkey-Nav ul li ul li {\
-                  text-align : center;\
-                  width : 60px;\
-              }\
-              .Monkey-Nav:after .Monkey-Nav li ul:after{\
-                  clear: both;\
-                  content: " ";\
-                  display: block;\
-                  height: 0;\
-              }\
-              .Monkey-Nav ul li{\
-                   float : left;\
-                   height : 26px;\
-                   line-height : 26px;\
-                   width : 60px;\
-                   position : relative;\
-                   padding : 0;\
-              }\
-              .Monkey-Nav ul li ul {\
-                  position : absolute;\
-                  top : 26px;\
-                  width : 60px;\
-                  background-color : #E9F4E9;\
-                  z-index : 100;\
-                  display : none;\
-              }\
-              .Monkey-Nav ul li:hover ul {\
-                  display : block;\
-              }\
-              .Monkey-Nav ul li ul a:hover {\
-                  background-color : #0C7823;\
-                  padding : 0 5px;\
-                  color : #fff;\
-              }\
-              .Monkey-Nav li ul li {\
-                  float: none;\
-                  height: 26px;\
-                  line-height: 26px;\
-                  padding : 0;\
-              }',
+        css : '.Monkey-Nav-top {\
+                clear: both;\
+                color: #D4D4D4;\
+                height: 30px;\
+                margin-bottom: 20px;\
+                width: 100%;\
+            }\
+            .Monkey-Nav-top a:link, .Monkey-Nav-top a:visited, .Monkey-Nav-top a:hover, .Monkey-Nav-top a:active {\
+                color: #566D5E;\
+            }\
+            .Monkey-Nav-top a:hover {\
+                color : #566D5E;\
+                background-color : #fff;\
+            }\
+            .Monkey-Nav-bd {\
+                position : fixed;\
+                left : 13.5%;\
+                height : 35px;\
+                width : 950px;\
+                z-index : 1000;\
+                padding-top : 7px;\
+                margin-top : -4px;\
+                background-color : #E9F4E9;\
+                border-radius : 3px;\
+                border-bottom : 1px dashed #D4D4D4;\
+            }\
+            .Monkey-Nav{\
+                display:block;\
+                font-size: 12px;\
+                margin-left : 15px;\
+            }\
+            .Monkey-Nav ul, .Monkey-Nav li {\
+                text-align : center;\
+                margin : 0;\
+                padding : 0;\
+            }\
+            .Monkey-Nav ul li ul li {\
+                text-align : center;\
+                width : 60px;\
+            }\
+            .Monkey-Nav:after .Monkey-Nav li ul:after{\
+                clear: both;\
+                content: " ";\
+                display: block;\
+                height: 0;\
+            }\
+            .Monkey-Nav ul li{\
+                float : left;\
+                height : 26px;\
+                line-height : 26px;\
+                width : 60px;\
+                position : relative;\
+                padding : 0;\
+            }\
+            .Monkey-Nav ul li ul {\
+                position : absolute;\
+                top : 26px;\
+                width : 60px;\
+                background-color : #E9F4E9;\
+                z-index : 100;\
+                display : none;\
+            }\
+            .Monkey-Nav ul li:hover ul {\
+                display : block;\
+            }\
+            .Monkey-Nav ul li ul a:hover {\
+                background-color : #0C7823;\
+                padding : 0 5px;\
+                color : #fff;\
+            }\
+            .Monkey-Nav li ul li {\
+                float: none;\
+                height: 26px;\
+                line-height: 26px;\
+                padding : 0;\
+            }\
+            .Monkey-Setting {\
+                float : right;\
+                padding-right : 20px;\
+                margin : 0;\
+            }\
+            .Monkey-Setting ul li, .Monkey-Setting ul li ul, .Monkey-Setting ul li ul li {\
+                width : 80px;\
+            }\
+            .Monkey-Nav-Search {\
+                background: url("/pics/nav/ui_ns_sbg4.png") no-repeat scroll 0 0 transparent;\
+                float: right;\
+                height: 30px;\
+                padding-left: 5px;\
+            }\
+            .Monkey-Nav-Search form {\
+                background: url("/pics/nav/ui_ns_sbg4.png") no-repeat scroll 100% 0 transparent;\
+                height: 30px;\
+                padding: 0 1px 0 0;\
+            }\
+            .Monkey-Nav-Search inp {\
+                width : 300px;\
+                padding-top : 5px;\
+            }\
+            .Monkey-Nav-Search input {\
+                background: none repeat scroll 0 0 #FFFFFF;\
+                border: 1px solid #A6D098;\
+                float: left;\
+                height: 26px;\
+                line-height: 26px;\
+                padding: 0 2px;\
+                width: 300px;\
+            }\
+            .Monkey-Nav-Search input.text {\
+                border: 1px solid #DCDCDC;\
+                border-radius: 5px;\
+                height: 1em;\
+                line-height: 1;\
+                padding: 8px 6px;\
+                width: 260px;\
+            }\
+            .Monkey-Nav-Search .bn-srh {\
+                background: url("/pics/nav/ui_ns_sbg4.png") no-repeat scroll -191px -100px transparent;\
+                border: 0 none;\
+                cursor: pointer;\
+                height: 23px;\
+                margin-left: -28px;\
+                overflow: hidden;\
+                text-indent: -100px;\
+                width: 23px;\
+            }\
+            .Monkey-ext-btn {\
+                color : #0C7823;\
+                cursor : pointer;\
+                border-radius : 3px;\
+                position : relative;\
+                width : 280px;\
+                top : -3px;\
+                display : none;\
+            }\
+            .Monkey-ext-btn div {\
+                float : left;\
+                padding : 2px 15px;\
+                background-color : #E9F4E9;\
+            }\
+            .Monkey-ext-btn div:hover {\
+                background-color : #fff;\
+                border-bottom:1px solid #dcdcdc;\
+                border-left:1px solid #dcdcdc;\
+                border-right:1px solid #dcdcdc;\
+            }\
+            .Monkey-Nav-Search:hover .Monkey-ext-btn {\
+                display : block;\
+            }',
 
-        html:'<div class="top-nav">\
-                   <div class="bd">\
-                       <div class="top-nav-info">\
-                            <a href="http://www.douban.com/doumail/">豆邮</a>\
-                            <a href="http://www.douban.com/accounts/" target="_blank">便型金刚的帐号</a>\
-                            <a href="http://www.douban.com/accounts/logout?ck=9P95">退出</a>\
+        html:'<div class="Monkey-Nav-top">\
+                   <div class="Monkey-Nav-bd">\
+                       <div class="Monkey-Nav Monkey-Setting">\
+                            <ul>\
+                                <li>\
+                                    <a href="http://www.douban.com/accounts/" target="_blank">我的帐号</a>\
+                                    <ul>\
+                                        <li><a href="http://www.douban.com/doumail/">豆邮</a></li>\
+                                        <li><a href="javascript:void(0);" title="MonkeyBean插件设置">MonkeyBean</a></li>\
+                                        <li><a href="http://www.douban.com/accounts/logout?ck=9P95">退出</a></li>\
+                                    </ul>\
+                                </li>\
+                            </ul>\
                        </div>\
-                       <div class="Monkey-Nav">\
+                       <div class="Monkey-Nav-Search">\
+                               <form action="/search" method="get" name="ssform" id="Monkey-Search-Form">\
+                                   <div class="inp">\
+                                       <span>\
+                                            <input type="text" value="" class="text" maxlength="60" size="22" placeholder="" title="" name="search_text" style="color: rgb(212, 212, 212);">\
+                                        </span>\
+                                       <span>\
+                                            <input type="submit" value="搜索" class="bn-srh"/>\
+                                            <div title="双击：立即搜索；单击：选择搜索范围" class="Monkey-ext-btn">\
+                                                    <div monkey-data="www" monkey-action="search">社区</div>\
+                                                    <div monkey-data="book" monkey-action="search">读书</div>\
+                                                    <div monkey-data="movie" monkey-action="search">电影</div>\
+                                                    <div monkey-data="music" monkey-action="search">音乐</div>\
+                                                    <div monkey-data="location" monkey-action="search">同城</div>\
+                                                    <input type="hidden" value="" name="cat">\
+                                                    <input type="hidden" value="' + (userLocation || 'location') + '" name="loc">\
+                                            </div>\
+                                       </span>\
+                                   </div>\
+                               </form>\
+                           </div>\
+                       <div class="Monkey-Nav" style="float:left;">\
                             <ul>\
                                 <li name="Monkey-Nav-mine">\
                                     <a href="http://www.douban.com/mine">我的豆瓣</a>\
@@ -1020,15 +1181,48 @@ typeof Updater != 'undefined' && new Updater({
             //在未登录的状态下，首页不显示导航栏
             if(window.location.href == MonkeyBeanConst.DOUBAN_MAINPAGE && !MonkeyBean.isLogin()) return false;
 
-            this.render(MonkeyBean.pageType);
-            return false;
+            var that = this,
+                pageType = MonkeyBean.pageType;
+
+            this.render(pageType);
+            this.form = $('#Monkey-Search-Form');
+            this.input = this.form.find('[name="search_text"]');
+            this.cat = this.form.find('[name="cat"]');
+
+            this.form.delegate('[monkey-action]', 'click', function(e) {
+                var target = e.target,
+                     type = target.getAttribute('monkey-data'),
+                     data = MonkeyBeanConst.SEARCH_INPUT[type];
+                that.search(data);
+                if(that.lastClick) {
+                    that.lastClick.style.cssText = '';
+                }
+                target.style.cssText = 'background-color : #fff;\
+                                border-bottom:1px solid #dcdcdc;\
+                                border-left:1px solid #dcdcdc;\
+                                border-right:1px solid #dcdcdc;';
+                that.lastClick = target;
+            });
+            this.form.delegate('[monkey-action]', 'dblclick', function(e) {
+                var type = e.target.getAttribute('monkey-data'),
+                     data = MonkeyBeanConst.SEARCH_INPUT[type];
+                that.search(data);
+                that.form[0].submit();
+            });
+
+            this.search(MonkeyBeanConst.SEARCH_INPUT[pageType]);
         },
 
         render : function(type) {
-            log('PAGETYPE====' + type);
             GM_addStyle(this.css);
             this.el.replaceWith(this.html);
             $('[name=Monkey-Nav-' + type + ']').addClass('on');
+        },
+
+        search : function(data) {
+            this.form.attr('action', data.url);
+            this.cat.val(data.cat);
+            this.input.attr('placeholder', data.placeholder);
         }
     });
 
@@ -1086,10 +1280,10 @@ typeof Updater != 'undefined' && new Updater({
     MonkeyModule('MonkeyComment', {
         //第一个为小组讨论，第二个为影评书评乐评，第三个为论坛
         filter : [
-                    /www.douban.com\/group\/topic\/\d+/,
-                    /(book|movie|music).douban.com\/review\/\d+/,
-                    /(book|movie|music).douban.com\/subject\/\d+\/discussion\/\d+/,
-                    /www.douban.com\/note\/\d+/
+            /www.douban.com\/group\/topic\/\d+/,
+            /(book|movie|music).douban.com\/review\/\d+/,
+            /(book|movie|music).douban.com\/subject\/\d+\/discussion\/\d+/,
+            /www.douban.com\/note\/\d+/
         ],
 
         els : {
@@ -1248,7 +1442,7 @@ typeof Updater != 'undefined' && new Updater({
     /**
      * 猴子工具条——包括电梯、分页导航栏等等
      * 整个豆瓣页面仅仅占据全部页面的中间部分，所以悬浮工具条放在右边是比较不错的。
-     * updateTime : 2012-2-25
+     * updateTime : 2012-2-29
      */
     MonkeyModule('MonkeyToolbar', {
         css : '#Monkey-Toolbar {\
@@ -1277,8 +1471,11 @@ typeof Updater != 'undefined' && new Updater({
              }',
 
         html : '<div id="Monkey-Toolbar">\
-                    <span class="Monkey-Toolbar-Text">猴子工具条</span>\
                 </div>',
+
+        fit : function() {
+            return false;
+        },
 
         load : function() {
             this.render();
@@ -1286,7 +1483,8 @@ typeof Updater != 'undefined' && new Updater({
 
         render : function() {
             GM_addStyle(this.css);
-            //$(document.body).append(this.html);
+            var el = $(this.html);
+            $(document.body).append(el);
         }
     });
 
@@ -1295,13 +1493,52 @@ typeof Updater != 'undefined' && new Updater({
      * updateTime : 2012-2-25
      */
     MonkeyModule('MonkeyPageLoader', {
+        css : '#Monkey-PageLoader span{\
+                border-radius : 5px;\
+                margin-top : 2px;\
+                color : #fff;\
+                line-height : 20px;\
+                width : 60%;\
+                display : inline-block;\
+                background-color : #83BF73;\
+             }\
+             #Monkey-PageLoader span:hover {\
+                background-color : #55BF73;\
+             }',
 
+        html : '<div id="Monkey-PageLoader">\
+                    <span monkey-action="loadNextPage">加载下一页</span>\
+                </div>',
+
+        fit : function() {
+            this.parentEl = $('div.paginator');
+            log(this.parentEl.length + '--------------');
+            if(this.parentEl.length > 0) {
+                return true;
+            }
+            return false;
+        },
+
+        load : function() {
+            this.render();
+            this.el.bind('click', $.proxy(this.loadPage, this));
+        },
+
+        render : function() {
+            GM_addStyle(this.css);
+            this.el = $(this.html);
+            this.parentEl.append(this.el);
+        },
+
+        loadPage : function() {
+
+        }
     });
 
     /**
      * 猴子箱——在个人链接上出现一个层，包含对该用户的快捷操作，例如用户的电影、读书、音乐等，还包括加关注和拉入黑名单等等。
      * 样式借鉴了知乎：www.zhihu.com
-     * updateTime : 2012-2-27
+     * updateTime : 2012-2-29
      */
     MonkeyModule('MonkeyBox', {
         css : '#MonkeyBox {\
@@ -1378,13 +1615,6 @@ typeof Updater != 'undefined' && new Updater({
                     <div class="xd xtb" id="xcd">\
                         <div class="xd xye">\
                             <div class="xsb">\
-                                <h1></h1>\
-                                <br>\
-                                <span class="Monkey-Button">日记</span>\
-                                <span class="Monkey-Button">相册</span>\
-                                <span class="Monkey-Button">喜欢</span>\
-                                <span class="Monkey-Button">广播</span>\
-                                <span class="Monkey-Button">豆列</span>\
                             </div>\
                             <div class="xbd">\
                                 <a class="xwv xuv" href="/inbox/2738424000">豆邮</a>\
@@ -1405,16 +1635,27 @@ typeof Updater != 'undefined' && new Updater({
         load : function() {
             var that = this,
                 a = $('a');
+            this.set('text', '<h1>{name}</h1>\
+                            <br>\
+                            <span class="Monkey-Button"><a href="{prefix}notes">日记</a></span>\
+                            <span class="Monkey-Button"><a href="{prefix}photos">相册</a></span>\
+                            <span class="Monkey-Button"><a href="{prefix}favorites">喜欢</a></span>\
+                            <span class="Monkey-Button"><a href="{prefix}miniblogs">广播</a></span>\
+                            <span class="Monkey-Button"><a href="{prefix}doulists">豆列</a></span>');
             this.people = /^http:\/\/www\.douban\.com\/people\/([^/]+\/$)/;
             this.render();
             a.hover(function(e) {
-                var a = $(this);
-                if(that.people.test(this.href) && a.find('img').length == 0) {
-                    that.url = this.href;
-                    that.show($(this).offset(), this.innerHTML);
-                }
+                var _this = this;
+                clearTimeout(that.ID);
+                that.ID = setTimeout(function() {
+                    var a = $(_this);
+                    if(that.people.test(_this.href) && a.find('img').length == 0) {
+                        that.url = _this.href;
+                        that.show($(_this).offset(), _this.innerHTML);
+                    }
+                }, 500);
+
             }, function(e) {
-                log(e.relatedTarget);
                 var flag = $.contains(that.box[0], e.relatedTarget);
                 !flag && that.hide();
             })
@@ -1425,7 +1666,7 @@ typeof Updater != 'undefined' && new Updater({
             GM_addStyle(this.css);
             GM_addStyle(MonkeyBean.UI.css.button);
             this.box = $(this.html);
-            this.text = this.box.find('h1');
+            this.text = this.box.find('.xsb');
             document.body.appendChild(this.box[0]);
 
             this.box.hover(function() {
@@ -1445,7 +1686,7 @@ typeof Updater != 'undefined' && new Updater({
                     'left' : position.left - 40 + 'px',
                     'top' : position.top - 160 + 'px'
                 });
-                that.text.text(text);
+                that.text.html(that.get('text').replace('{name}', text).replace(/\{prefix\}/g, that.url));
                 that.isShown = true;
             }, 500);
         },
@@ -1457,7 +1698,7 @@ typeof Updater != 'undefined' && new Updater({
             this.ID = setTimeout(function() {
                 that.box.fadeOut();
                 that.isShown = false;
-            }, 1000);
+            }, 500);
         }
     });
 
@@ -1467,32 +1708,98 @@ typeof Updater != 'undefined' && new Updater({
      */
     MonkeyModule('MonkeyGroup', {
         css : {
+            'sort' : '#Monkey-Group-Btn span {\
+                        margin-right : 4px;\
+                    }\
+                    .Monkey-Group {\
+                        border-radius : 5px;\
+                    }\
+                    .Monkey-Group .title{\
+                        background-color : #e2e2e2;\
+                        height : 20px;\
+                        line-height : 20px;\
+                        width : 100%;\
+                        display: inline-block;\
+                        vertical-align: middle;\
+                    }\
+                    .Monkey-Group .dissolve {\
+                        float : right;\
+                        border-radius : 15px;\
+                        margin-right : 10px;\
+                        cursor : pointer;\
+                    }\
+                    .Monkey-Group .dissolve:hover {\
+                        background-color : #FF7676\
+                    }'
         },
 
         html : {
             'toggle' : '<span class="Monkey-Button" style="float:right;">\
                             显示小组介绍\
-                         </span>'
+                         </span>',
+
+            'sort' : '<div id="Monkey-Group-Btn">\
+                            <span class="Monkey-Button" monkey-action="save" style="float:right;display:none;">\
+                                保存分类\
+                            </span>\
+                            <span class="Monkey-Button" monkey-action="cancel" style="float:right;display:none;" title="放弃本次操作">\
+                                放弃\
+                            </span>\
+                            <span class="Monkey-Button" monkey-action="modify" style="float:right;">\
+                                修改分类\
+                            </span>\
+                            <span class="Monkey-Button" monkey-action="add" style="float:right;">\
+                                添加分类\
+                            </span>\
+                       </div>',
+
+            'groupArea' : '<div class="Monkey-GroupArea"></div>',
+
+            'group' : ' <div class="Monkey-Group">\
+                                <div class="title">\
+                                    <span monkey-action="title">标题(双击修改)</span>\
+                                    <input type="text" style="display:none;"/>\
+                                    <span title="解散分组" class="dissolve" monkey-action="dissolve">x</span>\
+                                </div>\
+                                <div>拖拽小组图标到此区域</div>\
+                        </div>'
         },
 
         fit : function() {
             var path = MonkeyBean.path,
                 type = /www\.douban\.com\/group\/([^/]+)\/?$/,
                 result = '';
+
+            //小组分类
+            if(path == 'www.douban.com/group/mine') {
+                this.set('type', 'sort');
+                return true;
+            }
+            //隐藏小组介绍信息
             if(type.test(path)) {
-                result = path.replace(type, '$1');
-                this.set('type', result == 'mine' ? 'sort' : 'toggle');
+                this.set('type', 'toggle');
                 return true;
             }
             return false;
         },
 
         load : function() {
-            var type = this.get('type');
+            var type = this.get('type'),
+                that = this;
             this.render(type);
+
+            //初始化事件
+            this.el.delegate('span[monkey-action]', 'click', function() {
+                that[this.getAttribute('monkey-action')]();
+            })
+            //开始拖拽
+            this.bind('begin', this.begin, this);
+            //结束拖拽
+            this.bind('end', this.end, this);
         },
 
         render : function(type) {
+            var that = this;
             GM_addStyle(MonkeyBean.UI.css.button);
 
             if(type == 'toggle') {
@@ -1503,14 +1810,26 @@ typeof Updater != 'undefined' && new Updater({
                 this.el.clicked = false;
                 this.description.hide();
 
-                el.click($.proxy(this.toggle, this));
+                el.click(function() {
+                    that.toggleGroupDescription();
+                });
+            } else {
+                GM_addStyle(this.css.sort);
+
+                var tmp = $('#content .article h2');
+                this.el = $(this.html.sort);
+                this.el.insertBefore(tmp);
+                this.groupArea = $(this.html.groupArea); //用于放置分组区域
+                this.groupArea.insertAfter(tmp);
+                this.ungrouptArea = $('#content div.obssin dl'); //未分组区域
+                this.group = $(this.html.group)[0]; //每一个分组，
             }
 
         },
         /**
          * 显示/隐藏小组介绍
          */
-        toggle : function(e) {
+        toggleGroupDescription : function(e) {
             var flag = (this.el.clicked = !this.el.clicked);
             if(flag) {
                 this.el.html('隐藏小组介绍');
@@ -1521,12 +1840,80 @@ typeof Updater != 'undefined' && new Updater({
             }
             return true;
         },
+
+        begin : function() {
+            this.isBegin = true;
+            this.toggleSaveBtn(true);
+            //使未分组区域中的每个dl可以拖拽
+            this.ungrouptArea.attr('draggable', true);
+            this.ungrouptArea.css('cursor', 'move');
+            this.ungrouptArea.each(function() {
+                this.ondragstart = function(e) {
+                    e.dataTransfer.effectAllowed = 'copy'; // only dropEffect='copy' will be dropable
+                    e.dataTransfer.setData('Text', this.id); // required otherwise doesn't work
+                }
+            })
+        },
+
+        end : function() {
+            this.isBegin = false;
+            this.toggleSaveBtn(false);
+            this.ungrouptArea.attr('draggable', false);
+            this.ungrouptArea.css('cursor', '');
+            this.ungrouptArea.attr('ondragstart', null);
+        },
         /**
-         * 小组分类
+         * 增加小组分类
          */
-        sort : function() {
+        add : function() {
+            !this.isBegin && this.trigger('begin');
+            var group = this.group.cloneNode(true);
+            this.groupArea.append(group);
             return true;
+        },
+
+        /**
+         * 修改小组分类
+         */
+        modify : function() {
+            !this.isBegin && this.trigger('begin');
+            return true;
+        },
+        /**
+         * 放弃本次操作
+         */
+        cancel : function() {
+            if(confirm('你确定放弃本次操作吗？')) {
+                this.trigger('end', false);
+            }
+            return true;
+        },
+
+        /**
+         * 保存小组分类
+         */
+        save : function() {
+            this.trigger('end', false);
+            return true;
+        },
+        /**
+         * 修改分组标题
+         */
+        title : function() {
+
+        },
+        //显示/隐藏 保存按钮
+        toggleSaveBtn : function(flag) {
+            this.el.find('[monkey-action=cancel]')[flag ? 'show' : 'hide']();
+            this.el.find('[monkey-action=save]')[flag ? 'show' : 'hide']();
         }
+    });
+
+    /**
+     * 猴子邮件——在当前页面发送豆邮——有必要吗？不知道……
+     */
+    MonkeyModule('MonkeyMail', {
+
     });
 
     /*********************************Module end**************************************************************/
