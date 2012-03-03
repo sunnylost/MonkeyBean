@@ -836,6 +836,7 @@ typeof Updater != 'undefined' && new Updater({
         el : $('ul.mbt'),
 
         load : function () {
+            return true;
             this.render();
         },
 
@@ -911,7 +912,7 @@ typeof Updater != 'undefined' && new Updater({
             }\
             .Monkey-Nav-bd {\
                 position : fixed;\
-                left : 13.5%;\
+                left : 13.7%;\
                 height : 35px;\
                 width : 950px;\
                 z-index : 1000;\
@@ -973,7 +974,7 @@ typeof Updater != 'undefined' && new Updater({
             }\
             .Monkey-Setting {\
                 float : right;\
-                padding-right : 20px;\
+                padding-left : 20px;\
                 margin : 0;\
             }\
             .Monkey-Setting ul li, .Monkey-Setting ul li ul, .Monkey-Setting ul li ul li {\
@@ -989,6 +990,7 @@ typeof Updater != 'undefined' && new Updater({
                 background: url("/pics/nav/ui_ns_sbg4.png") no-repeat scroll 100% 0 transparent;\
                 height: 30px;\
                 padding: 0 1px 0 0;\
+                width : 260px;\
             }\
             .Monkey-Nav-Search inp {\
                 width : 300px;\
@@ -1023,16 +1025,19 @@ typeof Updater != 'undefined' && new Updater({
             }\
             .Monkey-ext-btn {\
                 color : #0C7823;\
+                background-color : #E9F4E9;\
                 cursor : pointer;\
                 border-radius : 3px;\
                 position : relative;\
-                width : 280px;\
+                width : 275px;\
                 top : -3px;\
                 display : none;\
+                float : left;\
             }\
             .Monkey-ext-btn div {\
                 float : left;\
-                padding : 2px 15px;\
+                padding : 5px 15px;\
+                margin : 0 0 2px;\
                 background-color : #E9F4E9;\
             }\
             .Monkey-ext-btn div:hover {\
