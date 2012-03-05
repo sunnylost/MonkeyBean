@@ -218,8 +218,14 @@ typeof Updater != 'undefined' && new Updater({
         },
         //MonkeyBean初始化方法
         init : function() {
+            var that = this;
             //this.trigger('load');
             this.MonkeyModuleManager.turnOn();
+            $(document.body).delegate('[monkey-action]', 'click', function(e) {
+                var action = this.getAttribute('monkey-action');
+                console.log('ACTION NAME=' + action);
+                that.trigger(action);
+            })
         },
 
         //是否登录
@@ -453,22 +459,6 @@ typeof Updater != 'undefined' && new Updater({
         }
     };
 
-    /**
-     * MonkeyBean配置模块
-     */
-    MonkeyModule('MonkeyConfig', {
-        html : '',
-
-        css : '',
-
-        load : function() {
-
-        },
-
-        render : function() {
-
-        }
-    });
 
     /*********************************UI begin**************************************************************/
     /**
@@ -912,7 +902,7 @@ typeof Updater != 'undefined' && new Updater({
             }\
             .Monkey-Nav-bd {\
                 position : fixed;\
-                left : 13.7%;\
+                left : {left}px;\
                 height : 35px;\
                 width : 950px;\
                 z-index : 1000;\
@@ -920,7 +910,6 @@ typeof Updater != 'undefined' && new Updater({
                 margin-top : -4px;\
                 background-color : #E9F4E9;\
                 border-radius : 3px;\
-                border-bottom : 1px dashed #D4D4D4;\
             }\
             .Monkey-Nav{\
                 display:block;\
@@ -1058,7 +1047,7 @@ typeof Updater != 'undefined' && new Updater({
                                     <a href="http://www.douban.com/accounts/" target="_blank">我的帐号</a>\
                                     <ul>\
                                         <li><a href="http://www.douban.com/doumail/">豆邮</a></li>\
-                                        <li><a href="javascript:void(0);" title="MonkeyBean插件设置">MonkeyBean</a></li>\
+                                        <li><a href="javascript:void(0);" monkey-action="MonkeyConfig.config" title="MonkeyBean插件设置">MonkeyBean</a></li>\
                                         <li><a href="http://www.douban.com/accounts/logout?ck=9P95">退出</a></li>\
                                     </ul>\
                                 </li>\
@@ -1193,6 +1182,7 @@ typeof Updater != 'undefined' && new Updater({
             this.form = $('#Monkey-Search-Form');
             this.input = this.form.find('[name="search_text"]');
             this.cat = this.form.find('[name="cat"]');
+            this.navBd = $('.Monkey-Nav-bd'); //用于设置导航栏位置
 
             this.form.delegate('[monkey-action]', 'click', function(e) {
                 var target = e.target,
@@ -1216,18 +1206,30 @@ typeof Updater != 'undefined' && new Updater({
             });
 
             this.search(MonkeyBeanConst.SEARCH_INPUT[pageType]);
+
+            $(window).resize(function() {
+                that.navBd.css('left',that.navWidth());
+            })
         },
 
         render : function(type) {
-            GM_addStyle(this.css);
+            GM_addStyle(this.css.replace('{left}', this.navWidth()));
             this.el.replaceWith(this.html);
             $('[name=Monkey-Nav-' + type + ']').addClass('on');
+            $('.nav-srh').hide();//隐藏原始的搜索栏
         },
 
         search : function(data) {
             this.form.attr('action', data.url);
             this.cat.val(data.cat);
             this.input.attr('placeholder', data.placeholder);
+        },
+
+        //根据窗口大小来改变导航栏左边的距离
+        navWidth : function() {
+            //TODO 频繁访问offsetWidth，是否会有问题？
+            var bodyWidth = document.body.offsetWidth; //body宽度，用于计算导航栏的位置
+            return (bodyWidth / 2 - 475); //导航栏宽度为950
         }
     });
 
@@ -1331,12 +1333,12 @@ typeof Updater != 'undefined' && new Updater({
 
         html : '<span name="monkey-commenttool" monkey-data="{1}" style="float:right;visibility:hidden;">\
                     <span>|</span>\
-                    <a href="javascript:void(0);" monkey-action="reply" rel="nofollow" title="回复该用户发言" style="display: inline;margin-left:0;">回</a>\
-                    <a href="javascript:void(0);" monkey-action="quote" rel="nofollow" title="引用该用户发言" style="display: inline;margin-left:0;">引</a>\
-                    <a href="javascript:void(0);" monkey-action="only" rel="nofollow" title="只看该用户的发言" style="display: inline;margin-left:0;">只</a>\
-                    <a href="javascript:void(0);" monkey-action="highlight" rel="nofollow" title="高亮该用户的所有发言" style="display: inline;margin-left:0;">亮</a>\
-                    <a href="javascript:void(0);" monkey-action="ignore" rel="nofollow" title="忽略该用户的所有发言" style="display: inline;margin-left:0;">略</a>\
-                    <a href="javascript:void(0);" monkey-action="reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">原</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment.reply" rel="nofollow" title="回复该用户发言" style="display: inline;margin-left:0;">回</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment.quote" rel="nofollow" title="引用该用户发言" style="display: inline;margin-left:0;">引</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment.only" rel="nofollow" title="只看该用户的发言" style="display: inline;margin-left:0;">只</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment.highlight" rel="nofollow" title="高亮该用户的所有发言" style="display: inline;margin-left:0;">亮</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment.ignore" rel="nofollow" title="忽略该用户的所有发言" style="display: inline;margin-left:0;">略</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment.reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">原</a>\
                 </span>',
 
         /**
@@ -1372,7 +1374,11 @@ typeof Updater != 'undefined' && new Updater({
             $(document.body).delegate('[monkey-action]', 'click', function() {
                 var actionName = this.getAttribute('monkey-action');
                 actionName && monkeyCommentToolbox[actionName] && monkeyCommentToolbox[actionName](this.parentNode.getAttribute('monkey-data'), this);
-            })
+            });
+            MonkeyBean.bind('MonkeyComment.*', function(para) {
+                var actionName = para.split('.')[1];
+                monkeyCommentToolbox[actionName] && monkeyCommentToolbox[actionName](this.parentNode.getAttribute('monkey-data'), this);
+            });
 
             //小组的回复区域：class为topic-reply的UL，影视书籍的回复：ID为comments的DIV
             //分页栏：class为paginator的DIV，当前页码：class为thispage的span
@@ -1490,6 +1496,93 @@ typeof Updater != 'undefined' && new Updater({
             GM_addStyle(this.css);
             var el = $(this.html);
             $(document.body).append(el);
+        }
+    });
+
+    /**
+     * MonkeyBean配置模块
+     */
+    MonkeyModule('MonkeyConfig', {
+        html : '<div id="Monkey-Config">\
+                    <div class="title"><span class="Monkey-Button" style="float:right;">取消</span><span class="Monkey-Button" style="float:right;">确定</span></div>\
+                    <ul class="Monkey-Config-Nav">\
+                        <li>其他配置</li>\
+                        <li>关于脚本</li>\
+                    </ul>\
+                    <div class="Monkey-Config-Content">\
+                        <div>\
+                            <input id="toggleGroupDescription" type="checkbox" /><label for="toggleGroupDescription">自动隐藏小组介绍</label>\
+                            <input id="showFloor" type="checkbox" /><label for="showFloor">显示楼层数</label>\
+                        </div>\
+                    </div>\
+                </div>',
+
+        css : '#Monkey-Config {\
+                    width : 300px;\
+                    position : fixed;\
+                    left : 30%;\
+                    top : 30%;\
+                    font-size : 12px;\
+                    background: none repeat scroll 0 0 #F6F6F6;\
+                    border: 1px solid #EAEAEA;\
+                    border-radius: 4px 4px 4px 4px;\
+                }\
+                #Monkey-Config .title {\
+                    background-color: #E9F4E9;\
+                    border: 1px solid #EAEAEA;\
+                    border-radius: 3px 3px 3px 3px;\
+                    color: #566D5E;\
+                    left: 0;\
+                    padding: 2px;\
+                    position: absolute;\
+                    top: -24px;\
+                }\
+                .Monkey-Config-Nav {\
+                    list-style : none;\
+                    background-color : #fff;\
+                    margin : 2px;\
+                    float : left;\
+                    padding : 2px;\
+                    text-align : center;\
+                }\
+                .Monkey-Config-Nav li {\
+                    border-bottom : 1px solid #e4e4e4;\
+                    background-color : #F2F8F2;\
+                    line-height : 30px;\
+                    cursor : pointer;\
+                    padding : 2px 10px;\
+                }\
+                .Monkey-Config-Nav li:hover {\
+                    background-color : #0C7823;\
+                    color : #fff;\
+                }\
+                .Monkey-Config-Content {\
+                    border : 1px solid #e4e4e4;\
+                    background-color : #fff;\
+                    overflow : hidden;\
+                    margin : 4px;\
+                    padding : 2px;\
+                }\
+                #Monkey-Config label {\
+                    cursor : pointer;\
+                }\
+                #Monkey-Config label:hover {\
+                    background-color : #0C7823;\
+                    color : #fff;\
+                }',
+
+        load : function() {
+            var that = this;
+            MonkeyBean.bind('MonkeyConfig.config', function() {
+                !that.isInit && that.render();
+            })
+        },
+
+        render : function() {
+            var el = $(this.html);
+            GM_addStyle(this.css);
+            $(document.body).append(el);
+            this.isInit = true;
         }
     });
 
@@ -1739,7 +1832,7 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         html : {
-            'toggle' : '<span class="Monkey-Button" style="float:right;">\
+            'toggle' : '<span class="Monkey-Button" monkey-action="MonkeyGroup.toggleGroupDescription" style="float:right;">\
                             显示小组介绍\
                          </span>',
 
@@ -1794,6 +1887,9 @@ typeof Updater != 'undefined' && new Updater({
             this.render(type);
 
             //初始化事件
+            MonkeyBean.bind('MonkeyGroup.toggleGroupDescription', this.toggleGroupDescription, this);
+
+
             this.el.delegate('span[monkey-action]', 'click', function() {
                 that[this.getAttribute('monkey-action')]();
             })
@@ -1814,10 +1910,6 @@ typeof Updater != 'undefined' && new Updater({
                 this.el = el;
                 this.el.clicked = false;
                 this.description.hide();
-
-                el.click(function() {
-                    that.toggleGroupDescription();
-                });
             } else {
                 GM_addStyle(this.css.sort);
 
