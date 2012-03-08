@@ -1636,7 +1636,7 @@ typeof Updater != 'undefined' && new Updater({
     /**
      * 猴子箱——在个人链接上出现一个层，包含对该用户的快捷操作，例如用户的电影、读书、音乐等，还包括加关注和拉入黑名单等等。
      * 样式借鉴了知乎：www.zhihu.com
-     * updateTime : 2012-2-29
+     * updateTime : 2012-3-8
      */
     MonkeyModule('MonkeyBox', {
         css : '#MonkeyBox {\
@@ -1709,14 +1709,12 @@ typeof Updater != 'undefined' && new Updater({
                 position : relative;\
             }',
 
-        html : '<div id="MonkeyBox" style="left: 290px; top: 150.5px; display: none;">\
+        html : '<div id="MonkeyBox" style="left: 290px; top: 150.5px; display: none;z-index:10000;">\
                     <div class="xd xtb" id="xcd">\
                         <div class="xd xye">\
                             <div class="xsb">\
                             </div>\
                             <div class="xbd">\
-                                <a class="xwv xuv" href="/inbox/2738424000">豆邮</a>\
-                                <a class="xjw xiw" data-focustype="people" name="focus" href="javascript:;">关注</a>\
                             </div>\
                         </div>\
                     </div>\
@@ -1733,14 +1731,17 @@ typeof Updater != 'undefined' && new Updater({
         load : function() {
             var that = this,
                 a = $('a');
-            this.set('text', '<h1>{name}</h1>\
+            this.set({'text': '<h1>{name}</h1>\
                             <br>\
                             <span class="Monkey-Button"><a href="{prefix}notes">日记</a></span>\
                             <span class="Monkey-Button"><a href="{prefix}photos">相册</a></span>\
                             <span class="Monkey-Button"><a href="{prefix}favorites">喜欢</a></span>\
                             <span class="Monkey-Button"><a href="{prefix}miniblogs">广播</a></span>\
-                            <span class="Monkey-Button"><a href="{prefix}doulists">豆列</a></span>');
-            this.people = /^http:\/\/www\.douban\.com\/people\/([^/]+\/$)/;
+                            <span class="Monkey-Button"><a href="{prefix}doulists">豆列</a></span>',
+                        'tool' : '<a class="xwv xuv" href="http://www.douban.com/doumail/write?to={nickname}">豆邮</a>\
+                                   <a class="xjw xiw" data-focustype="people" name="focus" href="javascript:;">关注</a>'
+            });
+            this.people = /^http:\/\/www\.douban\.com\/people\/([^/]+)\/$/;
             this.render();
             a.hover(function(e) {
                 var _this = this;
@@ -1748,6 +1749,7 @@ typeof Updater != 'undefined' && new Updater({
                 that.ID = setTimeout(function() {
                     var a = $(_this);
                     if(that.people.test(_this.href) && a.find('img').length == 0) {
+                        that.nickname = RegExp.$1;
                         that.url = _this.href;
                         that.show($(_this).offset(), _this.innerHTML);
                     }
@@ -1765,6 +1767,7 @@ typeof Updater != 'undefined' && new Updater({
             GM_addStyle(MonkeyBean.UI.css.button);
             this.box = $(this.html);
             this.text = this.box.find('.xsb');
+            this.tool = this.box.find('.xbd');
             document.body.appendChild(this.box[0]);
 
             this.box.hover(function() {
@@ -1785,6 +1788,7 @@ typeof Updater != 'undefined' && new Updater({
                     'top' : position.top - 160 + 'px'
                 });
                 that.text.html(that.get('text').replace('{name}', text).replace(/\{prefix\}/g, that.url));
+                that.tool.html(that.get('tool').replace('{nickname}', that.nickname));
                 that.isShown = true;
             }, 500);
         },
