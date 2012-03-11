@@ -199,10 +199,12 @@ typeof Updater != 'undefined' && new Updater({
             var that = this;
             //this.trigger('load');
             this.MonkeyModuleManager.turnOn();
+            //注册全局click事件
             $(document.body).delegate('[monkey-action]', 'click', function(e) {
-                var action = this.getAttribute('monkey-action');
-                console.log('ACTION NAME=' + action);
-                that.trigger(action);
+                var actionContext = this,
+                    actionType = this.getAttribute('monkey-action'),
+                    actionName = this.getAttribute('monkey-action-name');
+                that.trigger(actionType, [actionName, actionContext, e]);
             })
         },
 
@@ -252,10 +254,29 @@ typeof Updater != 'undefined' && new Updater({
             }
         })()
     };
-    MonkeyBean.pageType = (function() {//判断当前页面类型，是否为读书、电影、音乐等等，目前用于为导航栏增加当前页面提示，其中，9点、阿尔法城和fm没有导航栏，不必考虑
+    /**
+        TODO:需要重写
+
+     * 页面类型：
+           www : 我的豆瓣
+           book : 读书
+           movie : 电影
+           music : 音乐
+           location : 同城
+           9 : 9点
+           fm : FM
+           alpha : 阿尔法城
+           group : 小组
+           topic : 话题
+           doulist : 豆列
+      
+     */
+    MonkeyBean.page = (function() {
         var type = '',
+            turnType = '', //翻页类型
             hostname = location.hostname,
-            normalType = /(www|book|movie|music|9)\.douban\.com\/.*/,
+            normalType = /(www|book|movie|music|9)\.douban\.com\/.*/
+            doulist = /(book|movie|music)\.douban\.com\/doulist\/\d+/,
             group = /www\.douban\.com\/group\/topic\/\d+\/?/;
 
         if(hostname == 'douban.fm') {
@@ -263,15 +284,25 @@ typeof Updater != 'undefined' && new Updater({
         } else if(hostname == 'alphatown.com') {
             type = 'alpha';
         } else {
+            if(doulist.test(MonkeyBean.path)) {
+                turnType = 'doulist';
+            } 
             type = MonkeyBean.path.replace(normalType, '$1');
             if(type.indexOf('douban.com') != -1) {
-                type = group.test(MonkeyBean.path) ? 'group' : 'location';
+                if(group.test(MonkeyBean.path)) {
+                    turnType = 'group';
+                } else {
+                    type = 'location';
+                }
             }
         }
        
 
-        console.log('TYPE====' + type);
-        return type;
+        console.log('页面类型====' + type + '  翻页类型====' + turnType);
+        return {
+            'type' : type,
+            'turnType' : turnType
+        };
     })();
     var log = MonkeyBean.log;
     MonkeyBean.TM = MonkeyBean.MonkeyModuleManager;
@@ -309,7 +340,7 @@ typeof Updater != 'undefined' && new Updater({
 
             for(; i < max; i += 1) {
                 if(action === 'trigger') {
-                    subscribers[i].fn.call(subscribers[i].context, arg);
+                    subscribers[i].fn.apply(subscribers[i].context, arg);
                 } else {
                     if(subscribers[i].fn === arg && subscribers[i].context === context) {
                         subscribers.splice(i, 1);
@@ -1158,7 +1189,7 @@ typeof Updater != 'undefined' && new Updater({
         el : $('div.top-nav'),
 
         fit : function() {
-            var type = MonkeyBean.pageType;
+            var type = MonkeyBean.page.type;
             return type != 'fm' && type != '9' && type != 'alpha';
         },
 
@@ -1167,7 +1198,8 @@ typeof Updater != 'undefined' && new Updater({
             if(window.location.href == MonkeyBeanConst.DOUBAN_MAINPAGE && !MonkeyBean.isLogin()) return false;
 
             var that = this,
-                pageType = MonkeyBean.pageType;
+                pageType = MonkeyBean.page.type;
+
 
             this.render(pageType);
             this.form = $('#Monkey-Search-Form');
@@ -1248,11 +1280,11 @@ typeof Updater != 'undefined' && new Updater({
     MonkeyModule('MonkeyPosterToolbar', {
         html : '<div style="margin-bottom:10px;font-size: 14px;">\
                     <span monkey-data="{1}">\
-                        <span monkey-action="reply" rel="nofollow" title="回复楼主发言" class="Monkey-Button">回复</span>\
-                        <span monkey-action="only" rel="nofollow" title="只看楼主的发言" class="Monkey-Button">只看</span>\
-                        <span monkey-action="highlight" rel="nofollow" title="高亮楼主的所有发言" class="Monkey-Button">高亮</span>\
-                        <span monkey-action="ignore" rel="nofollow" title="忽略楼主的所有发言" class="Monkey-Button">忽略</span>\
-                        <span monkey-action="reset" rel="nofollow" title="还原到原始状态" class="Monkey-Button">还原</span>\
+                        <span monkey-action="MonkeyComment" monkey-action-name="reply" rel="nofollow" title="回复楼主发言" class="Monkey-Button">回复</span>\
+                        <span monkey-action="MonkeyComment" monkey-action-name="only" rel="nofollow" title="只看楼主的发言" class="Monkey-Button">只看</span>\
+                        <span monkey-action="MonkeyComment" monkey-action-name="highlight" rel="nofollow" title="高亮楼主的所有发言" class="Monkey-Button">高亮</span>\
+                        <span monkey-action="MonkeyComment" monkey-action-name="ignore" rel="nofollow" title="忽略楼主的所有发言" class="Monkey-Button">忽略</span>\
+                        <span monkey-action="MonkeyComment" monkey-action-name="reset" rel="nofollow" title="还原到原始状态" class="Monkey-Button">还原</span>\
                     </span>\
                 </div>',
 
@@ -1340,12 +1372,12 @@ typeof Updater != 'undefined' && new Updater({
 
         html : '<span name="monkey-commenttool" monkey-data="{1}" style="float:right;visibility:hidden;">\
                     <span>|</span>\
-                    <a href="javascript:void(0);" monkey-action="MonkeyComment.reply" rel="nofollow" title="回复该用户发言" style="display: inline;margin-left:0;">回</a>\
-                    <a href="javascript:void(0);" monkey-action="MonkeyComment.quote" rel="nofollow" title="引用该用户发言" style="display: inline;margin-left:0;">引</a>\
-                    <a href="javascript:void(0);" monkey-action="MonkeyComment.only" rel="nofollow" title="只看该用户的发言" style="display: inline;margin-left:0;">只</a>\
-                    <a href="javascript:void(0);" monkey-action="MonkeyComment.highlight" rel="nofollow" title="高亮该用户的所有发言" style="display: inline;margin-left:0;">亮</a>\
-                    <a href="javascript:void(0);" monkey-action="MonkeyComment.ignore" rel="nofollow" title="忽略该用户的所有发言" style="display: inline;margin-left:0;">略</a>\
-                    <a href="javascript:void(0);" monkey-action="MonkeyComment.reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">原</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment" monkey-action-name="reply" rel="nofollow" title="回复该用户发言" style="display: inline;margin-left:0;">回</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment" monkey-action-name="quote" rel="nofollow" title="引用该用户发言" style="display: inline;margin-left:0;">引</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment" monkey-action-name="only" rel="nofollow" title="只看该用户的发言" style="display: inline;margin-left:0;">只</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment" monkey-action-name="highlight" rel="nofollow" title="高亮该用户的所有发言" style="display: inline;margin-left:0;">亮</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment" monkey-action-name="ignore" rel="nofollow" title="忽略该用户的所有发言" style="display: inline;margin-left:0;">略</a>\
+                    <a href="javascript:void(0);" monkey-action="MonkeyComment" monkey-action-name="reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">原</a>\
                 </span>',
 
         /**
@@ -1378,13 +1410,8 @@ typeof Updater != 'undefined' && new Updater({
         load : function() {
             //这里注册的事件同样适用于楼主工具条。
             var that = this;
-            $(document.body).delegate('[monkey-action]', 'click', function() {
-                var actionName = this.getAttribute('monkey-action');
-                actionName && monkeyCommentToolbox[actionName] && monkeyCommentToolbox[actionName](this.parentNode.getAttribute('monkey-data'), this);
-            });
-            MonkeyBean.bind('MonkeyComment.*', function(para) {
-                var actionName = para.split('.')[1];
-                monkeyCommentToolbox[actionName] && monkeyCommentToolbox[actionName](this.parentNode.getAttribute('monkey-data'), this);
+            MonkeyBean.bind('MonkeyComment', function(actionName, context) {
+                monkeyCommentToolbox[actionName] && monkeyCommentToolbox[actionName](context.parentNode.getAttribute('monkey-data'), context);
             });
 
             //小组的回复区域：class为topic-reply的UL，影视书籍的回复：ID为comments的DIV
@@ -1604,6 +1631,7 @@ typeof Updater != 'undefined' && new Updater({
                 color : #fff;\
                 line-height : 20px;\
                 width : 60%;\
+                cursor : pointer;\
                 display : inline-block;\
                 background-color : #83BF73;\
              }\
@@ -1612,31 +1640,92 @@ typeof Updater != 'undefined' && new Updater({
              }',
 
         html : '<div id="Monkey-PageLoader">\
-                    <span monkey-action="loadNextPage">加载下一页</span>\
+                    <span monkey-action="MonkeyPageLoader" monkey-action-name="loadPage">加载下一页</span>\
                 </div>',
 
         fit : function() {
-            this.parentEl = $('div.paginator');
-            log(this.parentEl.length + '--------------');
-            if(this.parentEl.length > 0) {
-                return true;
-            }
-            return false;
+            this.parent = $('div.paginator');
+            return this.parent.length > 0;
         },
 
         load : function() {
             this.render();
-            this.el.bind('click', $.proxy(this.loadPage, this));
+            MonkeyBean.bind('MonkeyPageLoader', this.loadPage.bind(this));
+            this.current = this.parent.find('.thispage');   
+            this.next = this.current.next(); 
+            this.currentNum = +this.current.text();  //当前页码
+            this.isWorked = false;  //该功能是否运行过
+            this.filterScript = /<script[^>]*>.*?<\/script>/mg;  //过滤script标签
+            //最大的页码
+            ((this.maxNum = +this.parent.find('> a').last().text()) > +this.currentNum || (this.maxNum = this.currentNum));
+
+
+            log('是否是最后一页？' + this.isLastPage()); 
+        },
+        //翻页策略
+        loadPolitic : function() {
+            var politics = {
+                'doulist' : {
+                    'content' : 'div.article',  //需要获取的内容
+                    'filter' : 'script, div.filters, div.paginator, div.col2_doc, span.pl, div.rec-sec',  //需要过滤的无用内容
+                    'method' : 'insertBefore',  //使用哪种方法加载进当前dom中
+                    'target' : 'that.parent',    //对哪个目标元素操作
+                    'finish' : function(root) {
+                        //log(typeof unsafeWindow.Douban.init_collect_btn);
+                        //TODO 错误
+                        //unsafeWindow.Douban.init_collect_btn($(root));
+                    }
+                }
+            };
+
+            return politics[MonkeyBean.page.turnType];
         },
 
         render : function() {
             GM_addStyle(this.css);
             this.el = $(this.html);
-            this.parentEl.append(this.el);
+            this.parent.append(this.el);
+        },
+        //是否为第一页
+        isFirstPage : function() {
+            return this.currentNum == 1;
+        },
+        //是否为最后一页
+        isLastPage : function() {
+            return this.currentNum == this.maxNum;
         },
 
         loadPage : function() {
+            var that = this,
+                url = that.next.attr('href'),
+                politic = this.loadPolitic();
+            log('test bind');
+            if(this.isLastPage()) return;
 
+            $.ajax({
+                url : url,
+                success : function(resp) {
+                    var tmpDiv = document.createElement('div'),
+                        content;
+                    tmpDiv.innerHTML = resp;
+                    content = $(tmpDiv.querySelector(politic.content));
+                    content.find(politic.filter).replaceWith('');//过滤不必要的内容
+                    content[politic.method](eval(politic.target));
+                    typeof politic.finish == 'function' && politic.finish(content);
+                    //更新导航栏
+  
+                    that.next.replaceWith('<span class="thispage">' + (that.currentNum += 1) + '</span>');   //将下一页改变为当前页
+                    that.current.replaceWith('<a href="' + (that.isWorked ? that.preLink : location) + '">' + (that.currentNum - 1) + '</a>');//将上一页改变为链接
+                    that.current = that.parent.find('.thispage');   
+                    that.next = that.current.next(); 
+                    MonkeyBean.trigger('loadPage');//触发loadPage事件
+                    that.isWorked = true;  //已经运行过翻页
+                    that.preLink = url;
+                },
+                error : function() {
+
+                }
+            });
         }
     });
 
@@ -2030,7 +2119,7 @@ typeof Updater != 'undefined' && new Updater({
      */
     MonkeyModule('MonkeyFM', {
         fit : function() {
-            return MonkeyBean.pageType == 'fm'
+            return MonkeyBean.page.type == 'fm'
         },
 
         load : function() {
