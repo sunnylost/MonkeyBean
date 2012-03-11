@@ -2,7 +2,8 @@
 // @name           MonkeyBean
 // @namespace      sunnylost
 // @version        0.7
-// @include        http://*.douban.com/*
+// @include        http://*.douban.*/*
+// @include        http://douban.fm/*
 // @require http://userscript-autoupdate-helper.googlecode.com/svn/trunk/autoupdatehelper.js
 // @require http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js
 /* @reason
@@ -129,28 +130,6 @@ typeof Updater != 'undefined' && new Updater({
             return result;
         },
 
-        xml : {
-            parse : function(text) {
-                var xmlparse = new DOMParser();
-                this.xmldom = xmlparse.parseFromString(text, 'text/xml');
-                return this;
-            },
-
-            tag : function(name, el) {
-                el = el || this.xmldom;
-                this.el = el.getElementsByTagName(name)[0];
-                this.el && (this.el.data = this.attr('data'));
-                return this.el;
-            },
-
-            attr : function(name) {
-                return this.el.getAttribute(name);
-            },
-
-            tostring : function() {
-                return this.el || {};
-            }
-        },
         //让光标定位到文本框末尾，非浏览器兼容的代码
         focusToTheEnd : function(el) {
             var len = el.value.length;
@@ -171,15 +150,14 @@ typeof Updater != 'undefined' && new Updater({
     };
 
     //shortcuts
-    var xml = monkeyToolBox.xml,
-        cookie = monkeyToolBox.cookie,
-        query = monkeyToolBox.locationQuery,
+    var cookie = monkeyToolBox.cookie,
+        query = monkeyToolBox.locationQuery(),
         isNumeric = monkeyToolBox.isNumeric,
         focusToTheEnd = monkeyToolBox.focusToTheEnd;
 
     var MonkeyBean = {
         author : 'sunnylost',
-        updateTime : '20120303',
+        updateTime : '20120310',
         password : 'Ooo! Ooo! Aaa! Aaa! :(|)',
 
         path : location.hostname + location.pathname,
@@ -261,7 +239,6 @@ typeof Updater != 'undefined' && new Updater({
                 for(m in moduleTree) {
                     if(hasOwn.call(moduleTree, m)) {
                         tmpModule = moduleTree[m];
-                        //log('------' + m + '----' + moduleTree[m].filter);
                         log(tmpModule.name + ' 加载~');
                         tmpModule.fit() && tmpModule.load();
                     }
@@ -277,12 +254,21 @@ typeof Updater != 'undefined' && new Updater({
     };
     MonkeyBean.pageType = (function() {//判断当前页面类型，是否为读书、电影、音乐等等，目前用于为导航栏增加当前页面提示，其中，9点、阿尔法城和fm没有导航栏，不必考虑
         var type = '',
-            normalType = /(www|book|movie|music)\.douban\.com\/.*/,
+            hostname = location.hostname,
+            normalType = /(www|book|movie|music|9)\.douban\.com\/.*/,
             group = /www\.douban\.com\/group\/topic\/\d+\/?/;
-        type = MonkeyBean.path.replace(normalType, '$1');
-        if(type.indexOf('douban.com') != -1) {
-            type = group.test(MonkeyBean.path) ? 'group' : 'location';
+
+        if(hostname == 'douban.fm') {
+            type = 'fm';
+        } else if(hostname == 'alphatown.com') {
+            type = 'alpha';
+        } else {
+            type = MonkeyBean.path.replace(normalType, '$1');
+            if(type.indexOf('douban.com') != -1) {
+                type = group.test(MonkeyBean.path) ? 'group' : 'location';
+            }
         }
+       
 
         console.log('TYPE====' + type);
         return type;
@@ -735,7 +721,7 @@ typeof Updater != 'undefined' && new Updater({
     /*********************************Module begin**************************************************************/
     /**
      * 天气模块
-     * updateTime : 2012-2-19
+     * updateTime : 2012-3-10
      */
     MonkeyModule('MonkeyWeather', {
         attr : {
@@ -778,12 +764,12 @@ typeof Updater != 'undefined' && new Updater({
                     Accept: 'text/xml'
                 },
                 onload : function(resp) {
-                    xml.parse(resp.responseText);
-                    var current = xml.tag('current_conditions');
+                    var xml = $(resp.responseText);
+                    
                     that.set({
-                        condition : xml.tag('condition', current).data,
-                        icon : xml.tag('icon', current).data,
-                        temp : xml.tag('temp_c', current).data,
+                        condition : xml.find('condition').attr('data'),
+                        icon : xml.find('icon').attr('data'),
+                        temp : xml.find('temp_c').attr('data'),
                         place : place
                     });
                     that.render();
@@ -883,7 +869,7 @@ typeof Updater != 'undefined' && new Updater({
 
     /**
      * 猴子导航栏——用于显示顶部导航栏的二级菜单
-     * updateTime : 2012-3-3
+     * updateTime : 2012-3-10
      */
     MonkeyModule('MonkeyNavigator', {
         css : '.Monkey-Nav-top {\
@@ -1171,6 +1157,11 @@ typeof Updater != 'undefined' && new Updater({
 
         el : $('div.top-nav'),
 
+        fit : function() {
+            var type = MonkeyBean.pageType;
+            return type != 'fm' && type != '9' && type != 'alpha';
+        },
+
         load : function() {
             //在未登录的状态下，首页不显示导航栏
             if(window.location.href == MonkeyBeanConst.DOUBAN_MAINPAGE && !MonkeyBean.isLogin()) return false;
@@ -1183,6 +1174,10 @@ typeof Updater != 'undefined' && new Updater({
             this.input = this.form.find('[name="search_text"]');
             this.cat = this.form.find('[name="cat"]');
             this.navBd = $('.Monkey-Nav-bd'); //用于设置导航栏位置
+
+            this.input.val(query['search_text'] || '');  //设置搜索框的默认值
+
+            pageType == 'movie' && this.suggest();  //影视搜索提示
 
             this.form.delegate('[monkey-action]', 'click', function(e) {
                 var target = e.target,
@@ -1223,6 +1218,18 @@ typeof Updater != 'undefined' && new Updater({
             this.form.attr('action', data.url);
             this.cat.val(data.cat);
             this.input.attr('placeholder', data.placeholder);
+        },
+
+        //影视搜索的提示功能，iSuggest为豆瓣写的jQuery插件
+        //TODO 切换到其他类型时，该功能依然有效。
+        suggest : function() {
+            this.input.iSuggest({
+                api: '/j/subject_suggest',
+                tmplId: 'suggResult',
+                item_act: function(item){
+                    window.location = item.data("link");
+                }
+            });
         },
 
         //根据窗口大小来改变导航栏左边的距离
@@ -1392,7 +1399,7 @@ typeof Updater != 'undefined' && new Updater({
             if(len < 1) return;
 
             //楼层数。一般来说，多页的链接后面都有一个start参数，表示这页的楼层是从多少开始的。但这个参数并不可靠，考虑分析class为paginator的DIV，里面的a标签更可靠些。
-            start = +(query()['start']) || (currentPage.length != 0 && !isNaN(+(currentPage.text())) && MonkeyBeanConst.PAGE_ITEM_COUNTS * (+(currentPage.text()) - 1)) || 0;
+            start = +(query['start']) || (currentPage.length != 0 && !isNaN(+(currentPage.text())) && MonkeyBeanConst.PAGE_ITEM_COUNTS * (+(currentPage.text()) - 1)) || 0;
             this.set({
                 'start' : start,
                 'items' : items,
@@ -2015,6 +2022,69 @@ typeof Updater != 'undefined' && new Updater({
      */
     MonkeyModule('MonkeyMail', {
 
+    });
+
+    /**
+     *  猴子FM，豆瓣FM的下载、播放列表功能
+     *  updateTime : 2012-3-10
+     */
+    MonkeyModule('MonkeyFM', {
+        fit : function() {
+            return MonkeyBean.pageType == 'fm'
+        },
+
+        load : function() {
+            var that = this,
+                fm_js = /http:\/\/\w+\.douban\.com\/js\/radio\/packed_fm_player\d+\.js/;
+
+            $(document.head).on('DOMNodeInserted', function(e) {
+                var target = e.target;
+
+                if(fm_js.test(target.src)) {
+                    console.log('-=-=-=-=-=' + target.innerHTML);
+
+                    $(target).on('readystatechange', function() {
+                        console.log('-=-=-234234=-=-=' + target.innerHTML);
+                    })
+
+                    $(target).on('DOMCharacterDataModified', function() {
+                        log('-------------------------------------');
+                        log('DOMCharacterDataModified');
+                        log('-------------------------------------');
+                    });
+
+                    $(target).on('DOMSubtreeModified', function() {
+                        log('-------------------------------------');
+                        log('DOMSubtreeModified');
+                        log('-------------------------------------');
+                    });
+
+                    $(target).on('DOMAttrModified', function() {
+                        log('-------------------------------------');
+                        log('DOMAttrModified');
+                        log('-------------------------------------');
+                    });
+
+                    $(target).on('DOMCharacterDataModified', function() {
+                        log('-------------------------------------');
+                        log('DOMCharacterDataModified');
+                        log('-------------------------------------');
+                    });
+                    /*log(e.target.src);
+                    window.$_oldHandler = window.extStatusHandler;
+                    log(window.extStatusHandler);
+                    window.extStatusHandler = function(o) {
+                        window.$_oldHandler(o);
+                        that.fm(o);
+                    }*/
+                }
+            })
+        },
+
+        fm : function(o) {
+            log('---fm~~');
+            
+        }
     });
 
     /*********************************Module end**************************************************************/
