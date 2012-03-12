@@ -204,7 +204,17 @@ typeof Updater != 'undefined' && new Updater({
                 var actionContext = this,
                     actionType = this.getAttribute('monkey-action'),
                     actionName = this.getAttribute('monkey-action-name');
+                //console.log(actionType + '-' + actionName);
                 that.trigger(actionType, [actionName, actionContext, e]);
+            })
+
+            //loading动画
+            this.bind('loadingStart', function() {
+                $('.Monkey-Loading-stop').removeClass('Monkey-Loading-stop').addClass('Monkey-Loading');
+            })
+
+            this.bind('loadingStop', function() {
+                $('.Monkey-Loading').removeClass('Monkey-Loading').addClass('Monkey-Loading-stop');
             })
         },
 
@@ -266,34 +276,45 @@ typeof Updater != 'undefined' && new Updater({
            9 : 9点
            fm : FM
            alpha : 阿尔法城
+
            group : 小组
-           topic : 话题
+                topic : 话题
+                discussion : 讨论
+                category : 分类
            doulist : 豆列
+           update : 友邻广播
       
      */
     MonkeyBean.page = (function() {
         var type = '',
             turnType = '', //翻页类型
+            path = MonkeyBean.path,
             hostname = location.hostname,
-            normalType = /(www|book|movie|music|9)\.douban\.com\/.*/
+            normalType = /(www|book|movie|music|9)\.douban\.com\/.*/,
             doulist = /(book|movie|music)\.douban\.com\/doulist\/\d+/,
-            group = /www\.douban\.com\/group\/topic\/\d+\/?/;
+            group = /www\.douban\.com\/group\/?/,
+            topic = /group\/topic\/\d+/,
+            discussion = /group\/[^\/]+\/discussion/,
+            category = /group\/category\/\d+\//,
+            update = /www\.douban\.com\/update\//;
 
         if(hostname == 'douban.fm') {
             type = 'fm';
         } else if(hostname == 'alphatown.com') {
             type = 'alpha';
         } else {
-            if(doulist.test(MonkeyBean.path)) {
+            if(doulist.test(path)) {
                 turnType = 'doulist';
             } 
-            type = MonkeyBean.path.replace(normalType, '$1');
-            if(type.indexOf('douban.com') != -1) {
-                if(group.test(MonkeyBean.path)) {
-                    turnType = 'group';
-                } else {
-                    type = 'location';
-                }
+            type = path.replace(normalType, '$1');
+            if(group.test(path)) {
+                (topic.test(path) && (turnType = 'topic')) || 
+                (discussion.test(path) && (turnType = 'discussion')) ||
+                (category.test(path) && (turnType = 'category'));
+            } else if(update.test(path)) {
+                turnType = 'update';
+            } else if(type.indexOf('douban.com') != -1) {
+                type = 'location';
             }
         }
        
@@ -472,7 +493,37 @@ typeof Updater != 'undefined' && new Updater({
                         background-color: #0C7823;\
                         border-color: #C4E2D8;\
                         color: #FFFFFF;\
-                      }'
+                      }',
+
+            //loading样式来源于http://www.alessioatzeni.com/blog/css3-loading-animation-loop/
+            'loading' : '.Monkey-Loading {\
+                            background-color: rgba(0,0,0,0);\
+                            border:5px solid rgba(255,255,255,0.9);\
+                            opacity:.9;\
+                            border-left:5px solid rgba(0,0,0,0);\
+                            border-right:5px solid rgba(0,0,0,0);\
+                            border-radius:50px;\
+                            box-shadow: 0 0 15px #fff;\
+                            width:10px;\
+                            height:10px;\
+                            margin:0 auto;\
+                            position:relative;\
+                            -moz-animation:spinoffPulse 1s infinite linear;\
+                            -webkit-animation:spinoffPulse 1s infinite linear;\
+                        }\
+                        @-moz-keyframes spinoffPulse {\
+                            0% { -moz-transform:rotate(0deg); }\
+                            100% { -moz-transform:rotate(360deg);  }\
+                        }\
+                        @-webkit-keyframes spinoffPulse {\
+                            0% { -webkit-transform:rotate(0deg); }\
+                            100% { -webkit-transform:rotate(360deg); }\
+                        }\
+                        .Monkey-Loading-stop {\
+                            display : none;\
+                            -moz-animation-play-state : paused;\
+                        }'
+
         }
     };
 
@@ -1299,9 +1350,9 @@ typeof Updater != 'undefined' && new Updater({
         ],
 
         load : function(index) {
-            if(index === undefined) return false;
-
             this.el = this.els[index];
+
+            if(index === undefined ||  typeof this.el === 'undefined' || typeof this.el[0] === 'undefined') return false;
 
             var posterId = this.el[0].href.replace('http://www.douban.com/people/', '').split('/')[0],
                 posterNickName = this.el[0].textContent;
@@ -1321,7 +1372,8 @@ typeof Updater != 'undefined' && new Updater({
     /**
      * 猴子回复增强模块，适用于小组回复，书籍影视评论等，功能包括楼层数显示。
      * 我忍不住要吐槽啦！为啥豆瓣很多页面功能类似，html结构全完全不同！搞啥啊……
-     * updateTime : 2012-2-25
+     * TODO:等待重构——2012-3-12
+     * updateTime : 2012-3-12
      */
     MonkeyModule('MonkeyComment', {
         //第一个为小组讨论，第二个为影评书评乐评，第三个为论坛
@@ -1353,6 +1405,7 @@ typeof Updater != 'undefined' && new Updater({
             for(; i<len; i++) {
                 if(this.filter[i].test(MonkeyBean.path)) {
                     this.el = this.els[i];
+                    if(!this.el) return false;
                     this.set('index', i);
                     if(i == 1) {
                         this.refactor();
@@ -1370,7 +1423,7 @@ typeof Updater != 'undefined' && new Updater({
 
         css : '.Monkey-floor{ float:right; margin-right:5px;font-size:12px;}',
 
-        html : '<span name="monkey-commenttool" monkey-data="{1}" style="float:right;visibility:hidden;">\
+        html : '<span name="monkey-commenttool" monkey-data="{1}" style="float:right;">\
                     <span>|</span>\
                     <a href="javascript:void(0);" monkey-action="MonkeyComment" monkey-action-name="reply" rel="nofollow" title="回复该用户发言" style="display: inline;margin-left:0;">回</a>\
                     <a href="javascript:void(0);" monkey-action="MonkeyComment" monkey-action-name="quote" rel="nofollow" title="引用该用户发言" style="display: inline;margin-left:0;">引</a>\
@@ -1379,6 +1432,27 @@ typeof Updater != 'undefined' && new Updater({
                     <a href="javascript:void(0);" monkey-action="MonkeyComment" monkey-action-name="ignore" rel="nofollow" title="忽略该用户的所有发言" style="display: inline;margin-left:0;">略</a>\
                     <a href="javascript:void(0);" monkey-action="MonkeyComment" monkey-action-name="reset" rel="nofollow" title="还原到原始状态" style="display: inline;margin-left:0;">原</a>\
                 </span>',
+
+        prepare : function() {
+            //小组的回复区域：class为topic-reply的UL，影视书籍的回复：ID为comments的DIV
+            //分页栏：class为paginator的DIV，当前页码：class为thispage的span
+            var currentPage = $('.paginator .thispage'),
+                items,
+                len = 0,
+                start = 0;
+
+            items = this.el.find(this.get('commentItem'));
+            len = items.length;
+            if(len < 1) return;
+
+            //楼层数。一般来说，多页的链接后面都有一个start参数，表示这页的楼层是从多少开始的。但这个参数并不可靠，考虑分析class为paginator的DIV，里面的a标签更可靠些。
+            start = +(query['start']) || (currentPage.length != 0 && !isNaN(+(currentPage.text())) && MonkeyBeanConst.PAGE_ITEM_COUNTS * (+(currentPage.text()) - 1)) || 0;
+            this.set({
+                'start' : start,
+                'items' : items,
+                'length' : len
+            });
+        },
 
         /**
          * 重构页面，影评与书评的留言结构很怪异……
@@ -1414,63 +1488,53 @@ typeof Updater != 'undefined' && new Updater({
                 monkeyCommentToolbox[actionName] && monkeyCommentToolbox[actionName](context.parentNode.getAttribute('monkey-data'), context);
             });
 
-            //小组的回复区域：class为topic-reply的UL，影视书籍的回复：ID为comments的DIV
-            //分页栏：class为paginator的DIV，当前页码：class为thispage的span
-            var currentPage = $('.paginator .thispage'),
-                items,
-                len = 0,
-                start = 0;
-
-            items = this.el.find(this.get('commentItem'));
-            len = items.length;
-            if(len < 1) return;
-
-            //楼层数。一般来说，多页的链接后面都有一个start参数，表示这页的楼层是从多少开始的。但这个参数并不可靠，考虑分析class为paginator的DIV，里面的a标签更可靠些。
-            start = +(query['start']) || (currentPage.length != 0 && !isNaN(+(currentPage.text())) && MonkeyBeanConst.PAGE_ITEM_COUNTS * (+(currentPage.text()) - 1)) || 0;
-            this.set({
-                'start' : start,
-                'items' : items,
-                'length' : len
-            });
+            this.prepare();
             this.render();
-            log('seconde invoke');
+
             MonkeyBean.TM.get('MonkeyPosterToolbar').load(this.get('index'));
+            MonkeyBean.bind('loadPage', function() {
+                that.prepare();
+                that.render();
+            });
         },
 
         render : function() {
-            var i = 0,
-                tmp = null,
+            var tmp1 = null
+                tmp2 = null,
                 userId = '',
                 nickName = '',
                 items = this.get('items'),
-                len = this.get('length'),
                 start = this.get('start'),
+                len = this.get('length'),
+                i = start,
                 itemId = '';
 
             GM_addStyle(this.css);
             for(; i<len; i++) {
-                tmp = items.eq(i);
+                tmp1 = items.eq(i);
 
-                tmp.find(this.get('floor'))
-                    .append('<span class="Monkey-floor">' + (start + i + 1) + '楼</span>');
-                tmp = tmp.find('a img').length > 0 ? tmp.find('a')[1] : tmp.find('a')[0];
+                tmp1.find(this.get('floor'))
+                    .append('<span class="Monkey-floor">' + (i + 1) + '楼</span>');
+                tmp2 = tmp1.find('a img').length > 0 ? tmp1.find('a')[1] : tmp1.find('a')[0];
 
-                userId = tmp.href.replace('http://www.douban.com/people/', '').split('/')[0];
-                nickName = tmp.innerHTML;
+                userId = tmp2.href.replace('http://www.douban.com/people/', '').split('/')[0];
+                nickName = tmp2.innerHTML;
 
-                tmp = items.eq(i);
-                tmp.attr('monkey-sign', userId);
+                tmp1.attr('monkey-sign', userId);
 
-                (itemId = tmp.attr('id')) === '' && (tmp.attr('id', itemId = MonkeyBean.CommentId()));
+                (itemId = tmp1.attr('id')) === '' && (tmp1.attr('id', itemId = MonkeyBean.CommentId()));
                 //log('-----' + itemId + '----' + tmp.attr('id'));
                 //monke-data中保存的数据：用户ID，用户昵称，该条留言的ID
                 //log(this.el[3]);
-                tmp = tmp.find(this.get('commentTool'));
-                tmp.append(this.html.replace('{1}', userId + MonkeyBeanConst.DATA_SPLITER + nickName + MonkeyBeanConst.DATA_SPLITER + itemId));
-                tmp.parent().hover(function() {
-                    $(this).find('[name=monkey-commenttool]').css('visibility', 'visible');
+                tmp2 = tmp1.find(this.get('commentTool'));
+                tmp2.append(this.html.replace('{1}', userId + MonkeyBeanConst.DATA_SPLITER + nickName + MonkeyBeanConst.DATA_SPLITER + itemId));
+                //tmp2.parent().hover(function() {
+                tmp1.hover(function() {
+                    //$(this).find('[name=monkey-commenttool]').css('visibility', 'visible');
+                    $(this).find('div.operation_div').css('display', 'block');
                 }, function() {
-                    $(this).find('[name=monkey-commenttool]').css('visibility', 'hidden');
+                    $(this).find('div.operation_div').css('display', 'none');
+                    //$(this).find('[name=monkey-commenttool]').css('visibility', 'hidden');
                 });
             }
         }
@@ -1622,7 +1686,7 @@ typeof Updater != 'undefined' && new Updater({
 
     /**
      * 猴子翻页——通用的翻页工具
-     * updateTime : 2012-2-25
+     * updateTime : 2012-3-12
      */
     MonkeyModule('MonkeyPageLoader', {
         css : '#Monkey-PageLoader span{\
@@ -1641,6 +1705,7 @@ typeof Updater != 'undefined' && new Updater({
 
         html : '<div id="Monkey-PageLoader">\
                     <span monkey-action="MonkeyPageLoader" monkey-action-name="loadPage">加载下一页</span>\
+                    <div class="Monkey-Loading-stop" style="left:50px;top:-20px;"></div>\
                 </div>',
 
         fit : function() {
@@ -1665,15 +1730,88 @@ typeof Updater != 'undefined' && new Updater({
         //翻页策略
         loadPolitic : function() {
             var politics = {
+                //豆列
                 'doulist' : {
                     'content' : 'div.article',  //需要获取的内容
                     'filter' : 'script, div.filters, div.paginator, div.col2_doc, span.pl, div.rec-sec',  //需要过滤的无用内容
-                    'method' : 'insertBefore',  //使用哪种方法加载进当前dom中
-                    'target' : 'that.parent',    //对哪个目标元素操作
+                    'method' : 'content.insertBefore(that.parent)',  //使用eval运行这段代码将content加入到dom中，其中content变量名是固定的
                     'finish' : function(root) {
-                        //log(typeof unsafeWindow.Douban.init_collect_btn);
-                        //TODO 错误
-                        //unsafeWindow.Douban.init_collect_btn($(root));
+                        //重新绑定事件，以下代码来源于http://img3.douban.com/js/packed_douban504578906.js，略有修改
+                        var re = /a_(\w+)/;
+                        var fns = {};
+                        $(".j", root).each(function (i) {
+                            var m = re.exec(this.className);
+                            if (m) {
+                                var actionName = m[1],
+                                    f = fns[actionName];
+                                if (!f) {
+                                    f = eval("unsafeWindow.Douban.init_" + actionName);
+                                    fns[actionName] = f;
+                                }
+                                //简单判断元素是否绑定过事件，很不严谨，但在豆列页面是有效的。
+                                f && !$.data(this).events && f(this);                
+                            }
+                        }) 
+                    }
+                },
+                //小组讨论列表
+                'discussion' : {
+                    'content' : 'table.olt tbody tr:gt(0)',  //第一个tr是表格的表头
+                    'method' : 'content.appendTo($("table.olt tbody"))'
+                },
+
+                //小组话题
+                'topic' : {
+                    'content' : 'ul.topic-reply li',
+                    'method' : '$("ul.topic-reply").append(content)'
+                },
+
+                //小组分类
+                'category' : {
+                    'content' : 'div.indent div.indent',
+                    'filter' : 'div.paginator',
+                    'method' : 'content.children().insertBefore(that.parent)'
+                },
+
+                //友邻广播
+                'update' : {
+                    'content' : 'div.stream-items',
+                    'method' : '$("div.stream-items").append(content.children())',
+                    'finish' : function(root) {
+                        //TODO 尚未完成
+
+                        //重新绑定事件，以下代码来源于http://img3.douban.com/js/packed_statuses3217430347.js
+                        var a = $(".stream-items");
+                        log(a);
+                        a.find(".mod").each(function (c, e) {
+                            var d = $(this),
+                                f = d.attr("data-status-id");
+                            var b = new Status($(this), f);
+                            b.init()
+                        });
+                        a.find(".btn[data-action-type=expend-all]").click(function (b) {
+                            b.preventDefault();
+                            $(this).parent().prevAll(".status-item").show().end().remove()
+                        });
+                        a.delegate(".video-overlay", "click", function (b) {
+                            $(this).next(".video-object").show();
+                            $(b.target).hide().prev().hide()
+                        }).delegate(".video-object .back", "click", function (b) {
+                            b.preventDefault();
+                            $(this).parent().hide().prevAll().show()
+                        }).delegate(".bd blockquote a, .comments-items a:not(.btn)", "click", function (h) {
+                            var f = $(h.target).parents(".status-item");
+                            var b = f.attr("data-sid");
+                            var g = f.attr("data-action");
+                            var d = f.attr("data-target-type");
+                            var c = f.attr("data-object-kind");
+                            moreurl(this, {
+                                from: "nmbp-" + b,
+                                action: g,
+                                target_type: d,
+                                object_kind: c
+                            })
+                        })
                     }
                 }
             };
@@ -1683,7 +1821,9 @@ typeof Updater != 'undefined' && new Updater({
 
         render : function() {
             GM_addStyle(this.css);
+            GM_addStyle(MonkeyBean.UI.css.loading);
             this.el = $(this.html);
+            this.btn = this.el.find('span');
             this.parent.append(this.el);
         },
         //是否为第一页
@@ -1700,7 +1840,11 @@ typeof Updater != 'undefined' && new Updater({
                 url = that.next.attr('href'),
                 politic = this.loadPolitic();
             log('test bind');
-            if(this.isLastPage()) return;
+            //最后一页或没有翻页策略时返回
+            if(this.isLastPage() || typeof politic === 'undefined' || this.isLoading) return false;
+
+            MonkeyBean.trigger('loadingStart');  //显示loading效果
+            this.isLoading = true;
 
             $.ajax({
                 url : url,
@@ -1708,19 +1852,26 @@ typeof Updater != 'undefined' && new Updater({
                     var tmpDiv = document.createElement('div'),
                         content;
                     tmpDiv.innerHTML = resp;
-                    content = $(tmpDiv.querySelector(politic.content));
-                    content.find(politic.filter).replaceWith('');//过滤不必要的内容
-                    content[politic.method](eval(politic.target));
-                    typeof politic.finish == 'function' && politic.finish(content);
+                    content = $(tmpDiv).find(politic.content);
+                    typeof politic.filter !== 'undefined' && content.find(politic.filter).replaceWith('');//过滤不必要的内容
+                    eval(politic.method);
+                    typeof politic.finish == 'function' && politic.finish(document);
+                    tmpDiv = null;
+
                     //更新导航栏
-  
                     that.next.replaceWith('<span class="thispage">' + (that.currentNum += 1) + '</span>');   //将下一页改变为当前页
                     that.current.replaceWith('<a href="' + (that.isWorked ? that.preLink : location) + '">' + (that.currentNum - 1) + '</a>');//将上一页改变为链接
                     that.current = that.parent.find('.thispage');   
                     that.next = that.current.next(); 
+
+                    that.isLastPage() && that.btn.text('已经是最后一页啦！');
+
                     MonkeyBean.trigger('loadPage');//触发loadPage事件
+                    MonkeyBean.trigger('loadingStop');  //停止loading效果
+
                     that.isWorked = true;  //已经运行过翻页
                     that.preLink = url;
+                    that.isLoading = false;
                 },
                 error : function() {
 
