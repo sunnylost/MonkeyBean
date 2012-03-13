@@ -283,6 +283,7 @@ typeof Updater != 'undefined' && new Updater({
                 category : 分类
            doulist : 豆列
            update : 友邻广播
+           photo : 相册
       
      */
     MonkeyBean.page = (function() {
@@ -296,7 +297,8 @@ typeof Updater != 'undefined' && new Updater({
             topic = /group\/topic\/\d+/,
             discussion = /group\/[^\/]+\/discussion/,
             category = /group\/category\/\d+\//,
-            update = /www\.douban\.com\/update\//;
+            update = /www\.douban\.com\/update\//,
+            photo = /www\.douban\.com\/photos\/album\/\d+/;
 
         if(hostname == 'douban.fm') {
             type = 'fm';
@@ -313,6 +315,8 @@ typeof Updater != 'undefined' && new Updater({
                 (category.test(path) && (turnType = 'category'));
             } else if(update.test(path)) {
                 turnType = 'update';
+            } else if(photo.test(path)) {
+                turnType = 'photo';
             } else if(type.indexOf('douban.com') != -1) {
                 type = 'location';
             }
@@ -494,6 +498,23 @@ typeof Updater != 'undefined' && new Updater({
                         border-color: #C4E2D8;\
                         color: #FFFFFF;\
                       }',
+            //只是向下的箭头
+            'arrow' : ' .Monkey-Pointer {\
+                            position : absolute;\
+                            height : 0;\
+                            left : 50px;\
+                        }\
+                        .Monkey-Pointer-Border {\
+                            border: 9px solid;\
+                        }\
+                        .Monkey-a {\
+                            border-color: #BBBBBB transparent transparent;\
+                        }\
+                        .Monkey-b {\
+                            border-color: #FFFFFF transparent transparent;\
+                            top: -20px;\
+                            position : relative;\
+                        }',
 
             //loading样式来源于http://www.alessioatzeni.com/blog/css3-loading-animation-loop/
             'loading' : '.Monkey-Loading {\
@@ -524,6 +545,13 @@ typeof Updater != 'undefined' && new Updater({
                             -moz-animation-play-state : paused;\
                         }'
 
+        },
+
+        html : {
+            'arrow' : '<div class="Monkey-Pointer">\
+                        <div class="Monkey-a Monkey-Pointer-Border"></div>\
+                        <div class="Monkey-b Monkey-Pointer-Border"></div>\
+                    </div>'
         }
     };
 
@@ -531,38 +559,66 @@ typeof Updater != 'undefined' && new Updater({
     /*********************************UI begin**************************************************************/
     /**
      * 提示便签
-     * updateTime : 2012-2-19
+     * TODO : 默认3秒的延迟消失，这里的时间应该可以配置
+     * updateTime : 2012-3-13
      */
     MonkeyModule('tip', {
-        css : '#MonkeyUI-tip{background-color: #F9EDBE;border: 1px solid #F0C36D;-webkit-border-radius: 2px;-webkit-box-shadow: 0 2px 4px rgba(0,0,0,0.2);\
-             border-radius: 2px;box-shadow: 0 2px 4px rgba(0,0,0,0.2);font-size: 13px;line-height: 18px;padding: 16px; position: absolute;\
-             vertical-align: middle;width: 160px;z-index: 6000;border-image: initial;display:none;}\
-             ._monkey_arrow_inner {border-top: 6px solid #FFFFFF;top: 43px; z-index: 5;}\
-             ._monkey_arrow_outer {border-top: 6px solid #666666;z-index: 4;}',
+        css : '#MonkeyUI-tip {\
+                    background-color: #F9EDBE;\
+                    border: 1px solid #F0C36D;\
+                    -webkit-border-radius: 2px;\
+                    -webkit-box-shadow: 0 2px 4px rgba(0,0,0,0.2);\
+                    border-radius: 2px;\
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);\
+                    font-size: 13px;\
+                    line-height: 18px;\
+                    padding: 16px;\
+                    position: absolute;\
+                    vertical-align: middle;\
+                    width: 160px;\
+                    z-index: 6000;\
+                    border-image: initial;\
+                    display:none;\
+                }\
+                #MonkeyUI-tip .Monkey-Pointer {\
+                    top : 95px;\
+                }\
+                #MonkeyUI-tip .Monkey-a {\
+                    border-color : #F0C36D transparent transparent;\
+                }\
+                #MonkeyUI-tip .Monkey-b {\
+                    border-color : #F9EDBE transparent transparent;\
+                }',
 
         html : '<div id="MonkeyUI-tip">\
-                    <p></p>\
-                    <a href="javascript:void(0)" style="position:relative;left:45%;" action-type="close" >关闭</a>\
-                </div>',
+                    <p name="MonkeyUI-tip-content"></p>\
+                    <a href="javascript:void(0)" style="position:relative;left:45%;" monkey-action="TipClose" >关闭</a>\
+                    ' + MonkeyBean.UI.html.arrow + 
+                '</div>',
 
         load : function() {
+            var that = this;
             this.render();
+            MonkeyBean.bind('TipClose', function() {
+                that.hide();
+            })
         },
 
-        render : function() {
-            var that = this;
+        render : function() { 
             this.el = $(this.html);
+            this.content = this.el.find('p[name=MonkeyUI-tip-content]');
             document.body.appendChild(this.el[0]);
             GM_addStyle(this.css);
-
-            this.el.delegate('a', 'click', function() {
-                that.hide();
-            });
+            GM_addStyle(MonkeyBean.UI.css.arrow);
         },
 
         show : function(msg, pos) {
-            log(this.el.find('p'));
-            this.el.find('p').html(msg);
+            var that = this;
+            clearTimeout(this.timeoutId);
+            this.timeoutId = setTimeout(function() {
+                that.hide();
+            }, 3000);
+            this.content.html(msg);
             this.el.css({
                 'left' : pos.left + 'px',
                 'top' : pos.top + 'px'
@@ -571,6 +627,7 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         hide : function() {
+            clearTimeout(this.timeoutId);
             this.el.fadeOut();
         }
 
@@ -1373,6 +1430,9 @@ typeof Updater != 'undefined' && new Updater({
      * 猴子回复增强模块，适用于小组回复，书籍影视评论等，功能包括楼层数显示。
      * 我忍不住要吐槽啦！为啥豆瓣很多页面功能类似，html结构全完全不同！搞啥啊……
      * TODO:等待重构——2012-3-12
+
+        bug：
+            翻页后功能失效
      * updateTime : 2012-3-12
      */
     MonkeyModule('MonkeyComment', {
@@ -1462,11 +1522,11 @@ typeof Updater != 'undefined' && new Updater({
             var comments = this.el.detach(),
                 oldContent = comments.html();
             comments.html(oldContent.replace(/(<span class="wrap">)/, '<li class="clearfix"><div class="reply-doc">$1')
-                .replace(/(<h2>你的回应.*\s*<\/h2>\s*<div class="txd">)/, '</p><div class="operation_div" style="display:none;"></div><br></div></li>$1')
-                .replace(/<\/h3><\/span>/g, '</h4></span><p>')
-                .replace(/<h3>/g, '<h4>')
-                .replace(/(<span class="wrap">)/g, '</p><div class="operation_div" style="display:none;"></div><br></div></li>' +
-                '<li class="clearfix"><div class="reply-doc">$1'));
+                                    .replace(/(<h2>你的回应.*\s*<\/h2>\s*<div class="txd">)/, '</p><div class="operation_div" style="display:none;"></div><br></div></li>$1')
+                                    .replace(/<\/h3><\/span>/g, '</h4></span><p>')
+                                    .replace(/<h3>/g, '<h4>')
+                                    .replace(/(<span class="wrap">)/g, '</p><div class="operation_div" style="display:none;"></div><br></div></li>' +
+                                    '<li class="clearfix"><div class="reply-doc">$1'));
 
             $('.piir').append(comments);
             //将第一个元素替换为换行
@@ -1542,10 +1602,18 @@ typeof Updater != 'undefined' && new Updater({
 
     /**
      * 猴子相册——增强豆瓣相册浏览
-     * updateTime : 2012-2-25
+     * updateTime : 2012-3-13
      */
     MonkeyModule('MonkeyPic', {
+        fit : function() {
+            //翻页类型是photo就认为是相册页面
+            return MonkeyBean.page.turnType == 'photo';
+        },
 
+        load : function() {
+            //大图http://img3.douban.com/view/photo/photo/public/p1450859575.jpg
+            //小图http://img3.douban.com/view/photo/thumb/public/p1450859575.jpg
+        }
     });
 
     /**
@@ -1686,11 +1754,15 @@ typeof Updater != 'undefined' && new Updater({
 
     /**
      * 猴子翻页——通用的翻页工具
-     * updateTime : 2012-3-12
+     * updateTime : 2012-3-13
      */
     MonkeyModule('MonkeyPageLoader', {
-        css : '#Monkey-PageLoader span{\
-                border-radius : 5px;\
+        css : '#Monkey-PageLoader {\
+                    text-align : center;\
+                    margin-top : -15px;\
+               }\
+               #Monkey-PageLoader span{\
+                    border-radius : 5px;\
                 margin-top : 2px;\
                 color : #fff;\
                 line-height : 20px;\
@@ -1709,23 +1781,20 @@ typeof Updater != 'undefined' && new Updater({
                 </div>',
 
         fit : function() {
-            this.parent = $('div.paginator');
-            return this.parent.length > 0;
+            this.paginator = $('div.paginator');
+            return this.paginator.length > 0;
         },
 
         load : function() {
             this.render();
             MonkeyBean.bind('MonkeyPageLoader', this.loadPage.bind(this));
-            this.current = this.parent.find('.thispage');   
+            this.current = this.paginator.find('.thispage');   
             this.next = this.current.next(); 
             this.currentNum = +this.current.text();  //当前页码
             this.isWorked = false;  //该功能是否运行过
             this.filterScript = /<script[^>]*>.*?<\/script>/mg;  //过滤script标签
             //最大的页码
-            ((this.maxNum = +this.parent.find('> a').last().text()) > +this.currentNum || (this.maxNum = this.currentNum));
-
-
-            log('是否是最后一页？' + this.isLastPage()); 
+            ((this.maxNum = +this.paginator.find('> a').last().text()) > +this.currentNum || (this.maxNum = this.currentNum));
         },
         //翻页策略
         loadPolitic : function() {
@@ -1813,6 +1882,12 @@ typeof Updater != 'undefined' && new Updater({
                             })
                         })
                     }
+                },
+
+                //相册
+                'photo' : {
+                    'content' : 'div.photolst',
+                    'method' : '$("div.photolst").append(content.children())'
                 }
             };
 
@@ -1824,7 +1899,8 @@ typeof Updater != 'undefined' && new Updater({
             GM_addStyle(MonkeyBean.UI.css.loading);
             this.el = $(this.html);
             this.btn = this.el.find('span');
-            this.parent.append(this.el);
+            //this.parent.append(this.el);
+            this.el.insertAfter(this.paginator);
         },
         //是否为第一页
         isFirstPage : function() {
@@ -1839,7 +1915,6 @@ typeof Updater != 'undefined' && new Updater({
             var that = this,
                 url = that.next.attr('href'),
                 politic = this.loadPolitic();
-            log('test bind');
             //最后一页或没有翻页策略时返回
             if(this.isLastPage() || typeof politic === 'undefined' || this.isLoading) return false;
 
@@ -1849,19 +1924,20 @@ typeof Updater != 'undefined' && new Updater({
             $.ajax({
                 url : url,
                 success : function(resp) {
-                    var tmpDiv = document.createElement('div'),
+                    var tmpDiv = $('<div></div>'),
+                        paginator,
                         content;
-                    tmpDiv.innerHTML = resp;
-                    content = $(tmpDiv).find(politic.content);
+                    tmpDiv.html(resp);
+                    content = tmpDiv.find(politic.content);
+                    paginator = tmpDiv.find('div.paginator');
                     typeof politic.filter !== 'undefined' && content.find(politic.filter).replaceWith('');//过滤不必要的内容
                     eval(politic.method);
                     typeof politic.finish == 'function' && politic.finish(document);
                     tmpDiv = null;
 
                     //更新导航栏
-                    that.next.replaceWith('<span class="thispage">' + (that.currentNum += 1) + '</span>');   //将下一页改变为当前页
-                    that.current.replaceWith('<a href="' + (that.isWorked ? that.preLink : location) + '">' + (that.currentNum - 1) + '</a>');//将上一页改变为链接
-                    that.current = that.parent.find('.thispage');   
+                    that.paginator.html(paginator.html());
+                    that.current = that.paginator.find('.thispage');   
                     that.next = that.current.next(); 
 
                     that.isLastPage() && that.btn.text('已经是最后一页啦！');
@@ -1874,7 +1950,14 @@ typeof Updater != 'undefined' && new Updater({
                     that.isLoading = false;
                 },
                 error : function() {
-
+                    //显示错误提示
+                    var pos = that.el.position();
+                    MonkeyBean.TM.get('tip').show('出错啦！', {
+                        'left' : pos.left + 200,
+                        'top' : pos.top - 110
+                    });
+                    MonkeyBean.trigger('loadingStop');  //停止loading效果
+                    that.isLoading = false;
                 }
             });
         }
