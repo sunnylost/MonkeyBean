@@ -1782,14 +1782,14 @@ typeof Updater != 'undefined' && new Updater({
 
         fit : function() {
             this.paginator = $('div.paginator');
-            return this.paginator.length > 0;
+            this.current = this.paginator.find('.thispage'); 
+            this.next = this.current.next(); 
+            return this.paginator.length > 0 && this.current.length > 0;
         },
 
         load : function() {
             this.render();
             MonkeyBean.bind('MonkeyPageLoader', this.loadPage.bind(this));
-            this.current = this.paginator.find('.thispage');   
-            this.next = this.current.next(); 
             this.currentNum = +this.current.text();  //当前页码
             this.isWorked = false;  //该功能是否运行过
             this.filterScript = /<script[^>]*>.*?<\/script>/mg;  //过滤script标签
@@ -2344,14 +2344,75 @@ typeof Updater != 'undefined' && new Updater({
      * 猴子邮件——在当前页面发送豆邮——有必要吗？不知道……
      */
     MonkeyModule('MonkeyMail', {
+        //http://www.douban.com/doumail/write
+        //ck    9P95
+        //m_subject   
+        //m_submit    好了，寄出去
+        //m_text  
+        //to  36785654
+    });
 
+    /**
+     * 猴子底部工具栏——提供回到顶部、回到底部、豆瓣说等功能
+     * updateTime : 2012-3-13
+     */
+    MonkeyModule('MonkeyBottomToolbar', {
+        css : '#MonkeyBottomToolbar {\
+                    position : fixed;\
+                    bottom : -1px;\
+                    right : 50px;\
+                    height : 25px;\
+                    width : 100%;\
+               }\
+               #MonkeyBottomToolbar .Monkey-Button {\
+                    display : inline-block;\
+                    width : 40px;\
+                    height : 25px;\
+                    line-height : 25px;\
+                    text-align : center;\
+                    float : right;\
+               }',
+
+        html : '<div id="MonkeyBottomToolbar">\
+                    <span class="Monkey-Button">广播</span>\
+                    <span class="Monkey-Button" monkey-action="GoDown">向下</span>\
+                    <span class="Monkey-Button" monkey-action="GoUp">向上</span>\
+                </div>',
+
+        fit : function() {
+            return MonkeyBean.page.type != 'fm';
+        },
+
+        load : function() {
+            var that = this;
+            this.render();
+
+            MonkeyBean.bind('GoUp', function() {
+                unsafeWindow.scrollTo(0, 0);
+            })
+            MonkeyBean.bind('GoDown', function() {
+                unsafeWindow.scrollTo(0, document.documentElement.scrollHeight);
+            })
+        },
+
+        render : function() {
+            GM_addStyle(this.css);
+            GM_addStyle(MonkeyBean.UI.css.button);
+            this.el = $(this.html);
+            $(document.body).append(this.el);
+        }
     });
 
     /**
      *  猴子FM，豆瓣FM的下载、播放列表功能
-     *  updateTime : 2012-3-10
+     *  updateTime : 2012-3-13
      */
     MonkeyModule('MonkeyFM', {
+        css : '',
+
+        html : '<div>\
+                </div>',
+
         fit : function() {
             return MonkeyBean.page.type == 'fm'
         },
@@ -2361,52 +2422,23 @@ typeof Updater != 'undefined' && new Updater({
                 fm_js = /http:\/\/\w+\.douban\.com\/js\/radio\/packed_fm_player\d+\.js/;
 
             $(document.head).on('DOMNodeInserted', function(e) {
-                var target = e.target;
-
-                if(fm_js.test(target.src)) {
-                    console.log('-=-=-=-=-=' + target.innerHTML);
-
-                    $(target).on('readystatechange', function() {
-                        console.log('-=-=-234234=-=-=' + target.innerHTML);
-                    })
-
-                    $(target).on('DOMCharacterDataModified', function() {
-                        log('-------------------------------------');
-                        log('DOMCharacterDataModified');
-                        log('-------------------------------------');
-                    });
-
-                    $(target).on('DOMSubtreeModified', function() {
-                        log('-------------------------------------');
-                        log('DOMSubtreeModified');
-                        log('-------------------------------------');
-                    });
-
-                    $(target).on('DOMAttrModified', function() {
-                        log('-------------------------------------');
-                        log('DOMAttrModified');
-                        log('-------------------------------------');
-                    });
-
-                    $(target).on('DOMCharacterDataModified', function() {
-                        log('-------------------------------------');
-                        log('DOMCharacterDataModified');
-                        log('-------------------------------------');
-                    });
-                    /*log(e.target.src);
-                    window.$_oldHandler = window.extStatusHandler;
-                    log(window.extStatusHandler);
-                    window.extStatusHandler = function(o) {
-                        window.$_oldHandler(o);
-                        that.fm(o);
-                    }*/
+                if(fm_js.test(e.target.src)) {                  //判断js是否加载
+                    eval('setTimeout(function() {\
+                        unsafeWindow._extStatusHandler = unsafeWindow.extStatusHandler;\
+                        log(unsafeWindow.extStatusHandler);\
+                        unsafeWindow.extStatusHandler = function(o) {\
+                            unsafeWindow._extStatusHandler(o);\
+                            that.fm(o);\
+                        }\
+                    }, 1000)')
                 }
             })
         },
 
         fm : function(o) {
-            log('---fm~~');
-            
+            o = eval('(' + o + ')');
+            console.dir(o);
+            log('--------------------------------------------');
         }
     });
 
