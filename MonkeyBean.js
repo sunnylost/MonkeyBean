@@ -279,8 +279,8 @@ typeof Updater != 'undefined' && new Updater({
 
            group : 小组
                 topic : 话题
-                discussion : 讨论
                 category : 分类
+           discussion : 讨论
            list : 包括豆列、搜索列表
            update : 友邻广播
            photo : 相册
@@ -292,10 +292,10 @@ typeof Updater != 'undefined' && new Updater({
             path = MonkeyBean.path,
             hostname = location.hostname,
             normalType = /(www|book|movie|music|9)\.douban\.com\/.*/,
-            list = /(book|movie|music)\.douban\.com\/(doulist\/\d+)|(subject_search.*)/,
+            list = /(book|movie|music)\.douban\.com\/(doulist\/\d+)|(subject_search)|(review\/best\/)/,
             group = /www\.douban\.com\/group\/?/,
             topic = /group\/topic\/\d+/,
-            discussion = /group\/[^\/]+\/discussion/,
+            discussion = /((group\/[^\/]+)|(subject\/\d+))\/discussion/,
             category = /group\/category\/\d+\//,
             update = /www\.douban\.com\/update\//,
             photo = /www\.douban\.com\/photos\/album\/\d+/;
@@ -317,6 +317,8 @@ typeof Updater != 'undefined' && new Updater({
                 turnType = 'update';
             } else if(photo.test(path)) {
                 turnType = 'photo';
+            } else if(discussion.test(path)) {
+                turnType = 'discussion';
             } else if(type.indexOf('douban.com') != -1) {
                 type = 'location';
             }
@@ -324,6 +326,7 @@ typeof Updater != 'undefined' && new Updater({
        
 
         console.log('页面类型====' + type + '  翻页类型====' + turnType);
+        console.log('Path====' + path);
         return {
             'type' : type,
             'turnType' : turnType
@@ -355,6 +358,7 @@ typeof Updater != 'undefined' && new Updater({
 
         trigger : function(type, publication) {
             this.visitSubscribers('trigger', type, publication);
+            return this;
         },
 
         visitSubscribers : function(action, type, arg, context) {
@@ -1670,21 +1674,38 @@ typeof Updater != 'undefined' && new Updater({
      */
     MonkeyModule('MonkeyConfig', {
         html : '<div id="Monkey-Config">\
-                    <div class="title"><span class="Monkey-Button" style="float:right;">取消</span><span class="Monkey-Button" style="float:right;">确定</span></div>\
+                    <div class="title">\
+                        <span class="Monkey-Button" monkey-action="closeConfig" style="float:right;">取消</span>\
+                        <span class="Monkey-Button" monkey-action="saveConfig" style="float:right;">确定</span>\
+                    </div>\
                     <ul class="Monkey-Config-Nav">\
-                        <li>其他配置</li>\
-                        <li>关于脚本</li>\
+                        <li monkey-action="changeConfigPanel" monkey-data="other">其他配置</li>\
+                        <li monkey-action="changeConfigPanel" monkey-data="about">关于脚本</li>\
                     </ul>\
                     <div class="Monkey-Config-Content">\
-                        <div>\
+                        <div monkey-data="other" style="display:block;">\
                             <input id="toggleGroupDescription" type="checkbox" /><label for="toggleGroupDescription">自动隐藏小组介绍</label>\
                             <input id="showFloor" type="checkbox" /><label for="showFloor">显示楼层数</label>\
+                        </div>\
+                        <div monkey-data="about" style="overflow:auto;height:200px;">\
+                            <p>该脚本旨在为豆瓣增加各种各样的功能，Make your douban different!</p>\
+                            <p>至于怎么different……完全看我的心情吧！</p>\
+                            <dl>\
+                                <dt>Q:为什么会写这个脚本？</dt>\
+                                <dd>A:不知道……</dd>\
+                                <dt>Q:为什么会写这个脚本？</dt>\
+                                <dd>A:不知道……</dd>\
+                                <dt>Q:为什么会写这个脚本？</dt>\
+                                <dd>A:不知道……</dd>\
+                                <dt>Q:我想提建议！加功能！</dt>\
+                                <dd>A:不知道……</dd>\
+                            </dl>\
                         </div>\
                     </div>\
                 </div>',
 
         css : '#Monkey-Config {\
-                    width : 300px;\
+                    width : 400px;\
                     position : fixed;\
                     left : 30%;\
                     top : 30%;\
@@ -1729,6 +1750,9 @@ typeof Updater != 'undefined' && new Updater({
                     margin : 4px;\
                     padding : 2px;\
                 }\
+                .Monkey-Config-Content div {\
+                    display : none;\
+                }\
                 #Monkey-Config label {\
                     cursor : pointer;\
                 }\
@@ -1740,14 +1764,32 @@ typeof Updater != 'undefined' && new Updater({
         load : function() {
             var that = this;
             MonkeyBean.bind('MonkeyConfig.config', function() {
-                !that.isInit && that.render();
-            })
+                if(!that.isInit) {
+                    that.render();
+                    that.oldContent = that.content.find(':first-child');
+                    that.el.find('.Monkey-Config-Nav li').bind('mouseover', function() {
+                        var elem = $(this);
+                        if(elem.attr('monkey-action') == 'changeConfigPanel') {
+                            that.oldContent && that.oldContent.hide();
+                            that.oldContent = that.content.find('[monkey-data=' + elem.attr('monkey-data') + ']');
+                            that.oldContent.show();
+                        }
+                    });
+                }
+            });
+            MonkeyBean.bind('closeConfig', function() {
+                that.el.hide();
+            });
+            MonkeyBean.bind('saveConfig', function() {
+                that.el.hide();
+            });
         },
 
         render : function() {
-            var el = $(this.html);
+            this.el = $(this.html);
+            this.content = this.el.find('.Monkey-Config-Content');
             GM_addStyle(this.css);
-            $(document.body).append(el);
+            $(document.body).append(this.el);
             this.isInit = true;
         }
     });
@@ -1755,7 +1797,7 @@ typeof Updater != 'undefined' && new Updater({
     /**
      * 猴子翻页——通用的翻页工具
      bug：list翻页后有些功能失效
-     * updateTime : 2012-3-15
+     * updateTime : 2012-3-18
      */
     MonkeyModule('MonkeyPageLoader', {
         css : '#Monkey-PageLoader {\
@@ -1793,7 +1835,6 @@ typeof Updater != 'undefined' && new Updater({
             MonkeyBean.bind('MonkeyPageLoader', this.loadPage.bind(this));
             this.currentNum = +this.current.text();  //当前页码
             this.isWorked = false;  //该功能是否运行过
-            this.filterScript = /<script[^>]*>.*?<\/script>/mg;  //过滤script标签
             //最大的页码
             ((this.maxNum = +this.paginator.find('> a').last().text()) > +this.currentNum || (this.maxNum = this.currentNum));
         },
@@ -1939,12 +1980,13 @@ typeof Updater != 'undefined' && new Updater({
                     //更新导航栏
                     that.paginator.html(paginator.html());
                     that.current = that.paginator.find('.thispage');   
+                    that.currentNum = +that.current.text();
                     that.next = that.current.next(); 
 
                     that.isLastPage() && that.btn.text('已经是最后一页啦！');
 
-                    MonkeyBean.trigger('loadPage');//触发loadPage事件
-                    MonkeyBean.trigger('loadingStop');  //停止loading效果
+                    MonkeyBean.trigger('loadPage').//触发loadPage事件
+                               trigger('loadingStop');  //停止loading效果
 
                     that.isWorked = true;  //已经运行过翻页
                     that.preLink = url;
@@ -1967,7 +2009,7 @@ typeof Updater != 'undefined' && new Updater({
     /**
      * 猴子箱——在个人链接上出现一个层，包含对该用户的快捷操作，例如用户的电影、读书、音乐等，还包括加关注和拉入黑名单等等。
      * 样式借鉴了知乎：www.zhihu.com
-     * updateTime : 2012-3-8
+     * updateTime : 2012-3-17
      */
     MonkeyModule('MonkeyBox', {
         css : '#MonkeyBox {\
@@ -2060,8 +2102,7 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         load : function() {
-            var that = this,
-                a = $('a');
+            var that = this;
             this.set({'text': '<h1>{name}</h1>\
                             <br>\
                             <span class="Monkey-Button"><a href="{prefix}notes">日记</a></span>\
@@ -2072,9 +2113,9 @@ typeof Updater != 'undefined' && new Updater({
                         'tool' : '<a class="xwv xuv" href="http://www.douban.com/doumail/write?to={nickname}">豆邮</a>\
                                    <a class="xjw xiw" data-focustype="people" name="focus" href="javascript:;">关注</a>'
             });
-            this.people = /^http:\/\/www\.douban\.com\/people\/([^/]+)\/$/;
+            this.people = /^http:\/\/(www|movie)\.douban\.com\/people\/([^/]+)\/$/;
             this.render();
-            a.hover(function(e) {
+            $(document).delegate('a', 'mouseenter', function(e) {
                 var _this = this;
                 clearTimeout(that.ID);
                 that.ID = setTimeout(function() {
@@ -2086,9 +2127,13 @@ typeof Updater != 'undefined' && new Updater({
                     }
                 }, 500);
 
-            }, function(e) {
-                var flag = $.contains(that.box[0], e.relatedTarget);
-                !flag && that.hide();
+            });
+            $(document).delegate('a', 'mouseleave', function(e) {
+                if(that.people.test(this.href) && this.getElementsByTagName('img').length == 0) {
+                    var flag = $.contains(that.box[0], e.relatedTarget);
+                    clearTimeout(that.ID);
+                    !flag && that.hide();
+                }
             })
         },
 
@@ -2440,6 +2485,27 @@ typeof Updater != 'undefined' && new Updater({
             o = eval('(' + o + ')');
             console.dir(o);
             log('--------------------------------------------');
+        }
+    });
+
+    /**
+     * 猴子杂货铺——这些功能不知道怎么分类，暂时扔在这里
+     * updateTime : 2012-3-18
+     */
+    MonkeyModule('MonkeyGroceries', {
+        load : function() {
+            log('aaa');
+            var discussion = /subject\/\d+\/discussion\/\d+/;
+            log('------' + MonkeyBean.page.turnType);
+            //为电影、书籍的讨论页面增加回到电影/书籍的链接
+            if(MonkeyBean.page.turnType == 'discussion') {
+                if(discussion.test(MonkeyBean.path)) {
+                    var el = $('div.aside p.pl2'),
+                        a = el.find('a'),
+                        str = el.html();
+                    el.html(str + '</br></br>&gt; <a href="' + a.attr('href').replace('discussion/', '') + '">去' + a.text().match(/去(.*)的论坛/)[1] + '的页面</a>')
+                }
+            }
         }
     });
 
