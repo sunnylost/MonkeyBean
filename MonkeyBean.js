@@ -281,7 +281,7 @@ typeof Updater != 'undefined' && new Updater({
                 topic : 话题
                 discussion : 讨论
                 category : 分类
-           doulist : 豆列
+           list : 包括豆列、搜索列表
            update : 友邻广播
            photo : 相册
       
@@ -292,7 +292,7 @@ typeof Updater != 'undefined' && new Updater({
             path = MonkeyBean.path,
             hostname = location.hostname,
             normalType = /(www|book|movie|music|9)\.douban\.com\/.*/,
-            doulist = /(book|movie|music)\.douban\.com\/doulist\/\d+/,
+            list = /(book|movie|music)\.douban\.com\/(doulist\/\d+)|(subject_search.*)/,
             group = /www\.douban\.com\/group\/?/,
             topic = /group\/topic\/\d+/,
             discussion = /group\/[^\/]+\/discussion/,
@@ -305,9 +305,9 @@ typeof Updater != 'undefined' && new Updater({
         } else if(hostname == 'alphatown.com') {
             type = 'alpha';
         } else {
-            if(doulist.test(path)) {
-                turnType = 'doulist';
-            } 
+            if(list.test(path)) {
+                turnType = 'list';
+            }
             type = path.replace(normalType, '$1');
             if(group.test(path)) {
                 (topic.test(path) && (turnType = 'topic')) || 
@@ -1754,7 +1754,8 @@ typeof Updater != 'undefined' && new Updater({
 
     /**
      * 猴子翻页——通用的翻页工具
-     * updateTime : 2012-3-13
+     bug：list翻页后有些功能失效
+     * updateTime : 2012-3-15
      */
     MonkeyModule('MonkeyPageLoader', {
         css : '#Monkey-PageLoader {\
@@ -1799,11 +1800,11 @@ typeof Updater != 'undefined' && new Updater({
         //翻页策略
         loadPolitic : function() {
             var politics = {
-                //豆列
-                'doulist' : {
+                //列表：豆列、书籍影音搜索结果
+                'list' : {
                     'content' : 'div.article',  //需要获取的内容
                     'filter' : 'script, div.filters, div.paginator, div.col2_doc, span.pl, div.rec-sec',  //需要过滤的无用内容
-                    'method' : 'content.insertBefore(that.parent)',  //使用eval运行这段代码将content加入到dom中，其中content变量名是固定的
+                    'method' : 'content.insertBefore(that.paginator)',  //使用eval运行这段代码将content加入到dom中，其中content变量名是固定的
                     'finish' : function(root) {
                         //重新绑定事件，以下代码来源于http://img3.douban.com/js/packed_douban504578906.js，略有修改
                         var re = /a_(\w+)/;
@@ -1818,7 +1819,7 @@ typeof Updater != 'undefined' && new Updater({
                                     fns[actionName] = f;
                                 }
                                 //简单判断元素是否绑定过事件，很不严谨，但在豆列页面是有效的。
-                                f && !$.data(this).events && f(this);                
+                                f && f(this);                
                             }
                         }) 
                     }
@@ -1899,7 +1900,6 @@ typeof Updater != 'undefined' && new Updater({
             GM_addStyle(MonkeyBean.UI.css.loading);
             this.el = $(this.html);
             this.btn = this.el.find('span');
-            //this.parent.append(this.el);
             this.el.insertAfter(this.paginator);
         },
         //是否为第一页
@@ -1915,6 +1915,7 @@ typeof Updater != 'undefined' && new Updater({
             var that = this,
                 url = that.next.attr('href'),
                 politic = this.loadPolitic();
+
             //最后一页或没有翻页策略时返回
             if(this.isLastPage() || typeof politic === 'undefined' || this.isLoading) return false;
 
@@ -1954,7 +1955,7 @@ typeof Updater != 'undefined' && new Updater({
                     var pos = that.el.position();
                     MonkeyBean.TM.get('tip').show('出错啦！', {
                         'left' : pos.left + 200,
-                        'top' : pos.top - 110
+                        'top' : pos.top - 120
                     });
                     MonkeyBean.trigger('loadingStop');  //停止loading效果
                     that.isLoading = false;
@@ -2375,8 +2376,8 @@ typeof Updater != 'undefined' && new Updater({
 
         html : '<div id="MonkeyBottomToolbar">\
                     <span class="Monkey-Button">广播</span>\
-                    <span class="Monkey-Button" monkey-action="GoDown">向下</span>\
-                    <span class="Monkey-Button" monkey-action="GoUp">向上</span>\
+                    <span class="Monkey-Button" monkey-action="GoDown" title="回到底部">向下</span>\
+                    <span class="Monkey-Button" monkey-action="GoUp" title="回到顶部">向上</span>\
                 </div>',
 
         fit : function() {
