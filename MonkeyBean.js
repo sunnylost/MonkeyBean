@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name           MonkeyBean
 // @namespace      sunnylost
-// @version        1.0
+// @version        1.0.1
 // @include        http://*.douban.*/*
 // @include        http://douban.fm/*
 // @require http://userscript-autoupdate-helper.googlecode.com/svn/trunk/autoupdatehelper.js
-// @require http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js
+// @require http://code.jquery.com/jquery-1.7.2.min.js
 /* @reason
  @end*/
 // ==/UserScript==
@@ -251,7 +251,7 @@ typeof Updater != 'undefined' && new Updater({
                 for(m in moduleTree) {
                     if(hasOwn.call(moduleTree, m)) {
                         tmpModule = moduleTree[m];
-                        log(tmpModule.name + ' 加载~');
+                        //log(tmpModule.name + ' 加载~');
                         tmpModule.fit() && tmpModule.load();
                     }
                 }
@@ -446,7 +446,7 @@ typeof Updater != 'undefined' && new Updater({
     //log(userLocation);
 
     //GM_deleteValue(cName);
-    log('username=' + userName);
+    //log('username=' + userName);
     //获得用户ID与地址
     (function () {
         if (!userName) {
@@ -460,7 +460,7 @@ typeof Updater != 'undefined' && new Updater({
                     var arr = resp.finalUrl.split('/');
                     userName = arr[arr.length - 2];
                     MonkeyBean.set(MonkeyBeanConst.USER_NAME, userName);
-                    log('2222' + MonkeyBeanConst.USER_NAME + '=' + MonkeyBean.get(MonkeyBeanConst.USER_NAME, ''));
+                    //log('2222' + MonkeyBeanConst.USER_NAME + '=' + MonkeyBean.get(MonkeyBeanConst.USER_NAME, ''));
                 }
             })
         }
@@ -744,7 +744,7 @@ typeof Updater != 'undefined' && new Updater({
                 </div>',
 
         load : function() {
-            log('loading reply');
+            //log('loading reply');
             this.render();
         },
 
@@ -766,7 +766,7 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         submit : function() {
-            log('submit');
+            //log('submit');
         },
         //清除回复框中的内容
         reset : function() {
@@ -807,12 +807,12 @@ typeof Updater != 'undefined' && new Updater({
                 quoteHeader = '',
                 quoteContent = '',
                 spliter = '-------------------------------------------------------------------\n';
-            log('-----=====' + commentId);
+            //log('-----=====' + commentId);
             comment = $('#' + commentId);
             quoteHeader = comment.find('h4').text().replace(/\s+/g, ' ') + '\n';
             quoteContent = comment.find('.reply-doc p').text() + '\n';
-            log(quoteHeader);
-            log(quoteContent);
+            //log(quoteHeader);
+            //log(quoteContent);
             MonkeyBean.TM.get('reply').setContent(spliter + quoteHeader + quoteContent + spliter);
         },
         //只看该用户发言
@@ -1355,7 +1355,7 @@ typeof Updater != 'undefined' && new Updater({
 
         render : function(type) {
             GM_addStyle(this.css.replace('{left}', this.navWidth()));
-            console.log($('.top-nav-info em').html());
+            //console.log($('.top-nav-info em').html());
             this.el.replaceWith(this.html);
             $('[name=Monkey-Nav-' + type + ']').addClass('on');
             $('.nav-srh').hide();//隐藏原始的搜索栏
@@ -1891,7 +1891,7 @@ typeof Updater != 'undefined' && new Updater({
 
                         //重新绑定事件，以下代码来源于http://img3.douban.com/js/packed_statuses3217430347.js
                         var a = $(".stream-items");
-                        log(a);
+                        //log(a);
                         a.find(".mod").each(function (c, e) {
                             var d = $(this),
                                 f = d.attr("data-status-id");
@@ -2119,7 +2119,7 @@ typeof Updater != 'undefined' && new Updater({
                 that.ID = setTimeout(function() {
                     var a = $(_this);
                     if(that.people.test(_this.href) && a.find('img').length == 0) {
-                        that.nickname = RegExp.$1;
+                        that.nickname = RegExp.$2;
                         that.url = _this.href;
                         that.show($(_this).offset(), _this.innerHTML);
                     }
@@ -2724,7 +2724,7 @@ typeof Updater != 'undefined' && new Updater({
         fm : function(o) {
             o = eval('(' + o + ')');
             console.dir(o);
-            log('--------------------------------------------');
+            //log('--------------------------------------------');
         }
     });
 
@@ -2734,9 +2734,9 @@ typeof Updater != 'undefined' && new Updater({
      */
     MonkeyModule('MonkeyGroceries', {
         load : function() {
-            log('aaa');
+            //log('aaa');
             var discussion = /subject\/\d+\/discussion\/\d+/;
-            log('------' + MonkeyBean.page.turnType);
+            //log('------' + MonkeyBean.page.turnType);
             //为电影、书籍的讨论页面增加回到电影/书籍的链接
             if(MonkeyBean.page.turnType == 'discussion') {
                 if(discussion.test(MonkeyBean.path)) {
@@ -2751,9 +2751,9 @@ typeof Updater != 'undefined' && new Updater({
 
     /*********************************Module end**************************************************************/
 
-    log('test debug Mode');
+    //log('test debug Mode');
 
     MonkeyBean.init();
 
-    log(((new Date()) - startTime)/1000 + '秒');
+    //log(((new Date()) - startTime)/1000 + '秒');
 })(window, unsafeWindow.$)
