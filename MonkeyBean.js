@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           MonkeyBean
 // @namespace      sunnylost
-// @version        1.0.1
+// @version        1.2
 // @include        http://*.douban.*/*
 // @include        http://douban.fm/*
 // @require http://userscript-autoupdate-helper.googlecode.com/svn/trunk/autoupdatehelper.js
@@ -13,7 +13,7 @@
 typeof Updater != 'undefined' && new Updater({
     name: "MonkeyBean",
     id: "124760",
-    version:"1.0"
+    version:"1.2"
 }).check();
 
 /**
@@ -22,10 +22,11 @@ typeof Updater != 'undefined' && new Updater({
  *      monkey-data：用于保存信息
  *      monkey-sign：标记的元素
  */
-(function(window, $, undefined) {
+(function(window, undefined) {
     if(window !== window.top) return false;  //防止在iframe中执行
 
-    $ = $ || window.$;
+    var $ = $ || unsafeWindow.$;  //默认使用1.7.2版本的jQuery，如果不存在则使用豆瓣提供的，目前版本1.4.4
+    var body = $(document.body);
 
     var startTime = new Date();
 
@@ -86,7 +87,6 @@ typeof Updater != 'undefined' && new Updater({
     };
 
     var hasOwn = Object.prototype.hasOwnProperty,
-
         mine = /\/mine/,
         people = /\/people\/(.*)\//,
         //快捷键对应的code
@@ -135,29 +135,17 @@ typeof Updater != 'undefined' && new Updater({
             var len = el.value.length;
             el.setSelectionRange(len, len);
             el.focus();
-        },
-        //jQuery 1.7的方法
-        isNumeric: function( obj ) {
-            return !isNaN( parseFloat(obj) ) && isFinite( obj );
-        },
-
-        //增加快捷键
-        addHotKey : function(elem, key, fn) {
-            elem.addEventListener('keydown', function(e) {
-                fn();
-            });
         }
     };
 
     //shortcuts
     var cookie = monkeyToolBox.cookie,
         query = monkeyToolBox.locationQuery(),
-        isNumeric = monkeyToolBox.isNumeric,
         focusToTheEnd = monkeyToolBox.focusToTheEnd;
 
     var MonkeyBean = {
         author : 'sunnylost',
-        updateTime : '20120310',
+        updateTime : '20120527',
         password : 'Ooo! Ooo! Aaa! Aaa! :(|)',
 
         path : location.hostname + location.pathname,
@@ -197,23 +185,22 @@ typeof Updater != 'undefined' && new Updater({
         //MonkeyBean初始化方法
         init : function() {
             var that = this;
-            //this.trigger('load');
             this.MonkeyModuleManager.turnOn();
             //注册全局click事件
-            $(document.body).delegate('[monkey-action]', 'click', function(e) {
+            body.delegate('[monkey-action]', 'click', function(e) {
                 var actionContext = this,
                     actionType = this.getAttribute('monkey-action'),
                     actionName = this.getAttribute('monkey-action-name');
-                //console.log(actionType + '-' + actionName);
-                that.trigger(actionType, [actionName, actionContext, e]);
+                console.log('actionType=' + actionType);
+                body.trigger(actionType, [actionName, actionContext]);
             })
 
             //loading动画
-            this.bind('loadingStart', function() {
+            body.bind('loadingStart', function() {
                 $('.Monkey-Loading-stop').removeClass('Monkey-Loading-stop').addClass('Monkey-Loading');
             })
 
-            this.bind('loadingStop', function() {
+            body.bind('loadingStop', function() {
                 $('.Monkey-Loading').removeClass('Monkey-Loading').addClass('Monkey-Loading-stop');
             })
         },
@@ -298,7 +285,7 @@ typeof Updater != 'undefined' && new Updater({
             discussion = /((group\/[^\/]+)|(subject\/\d+))\/discussion/,
             category = /group\/category\/\d+\//,
             update = /www\.douban\.com\/update\//,
-            photo = /www\.douban\.com\/photos\/album\/\d+/;
+            photo = /^www\.douban\.com\/photos\/album\/\d+\/$/;
 
         if(hostname == 'douban.fm') {
             type = 'fm';
@@ -332,55 +319,10 @@ typeof Updater != 'undefined' && new Updater({
     var log = MonkeyBean.log;
     MonkeyBean.TM = MonkeyBean.MonkeyModuleManager;
 
-    var cusEvents = {
-        subscribers : {
-        },
-
-        bind : function(type, fn, context) {
-            type = type || 'any';
-            fn = $.isFunction(fn) ? fn : context[fn];
-
-            if(typeof this.subscribers[type] === 'undefined') {
-                this.subscribers[type] = [];
-            }
-            this.subscribers[type].push({
-                fn : fn,
-                context : context || this
-            })
-        },
-
-        unbind : function(type, fn, context) {
-            this.visitSubscribers('unbind', type, fn, context);
-        },
-
-        trigger : function(type, publication) {
-            this.visitSubscribers('trigger', type, publication);
-            return this;
-        },
-
-        visitSubscribers : function(action, type, arg, context) {
-            var pubtype = type || 'any',
-                subscribers = this.subscribers[pubtype],
-                i = 0,
-                max = subscribers ? subscribers.length : 0;
-
-            for(; i < max; i += 1) {
-                if(action === 'trigger') {
-                    subscribers[i].fn.apply(subscribers[i].context, arg);
-                } else {
-                    if(subscribers[i].fn === arg && subscribers[i].context === context) {
-                        subscribers.splice(i, 1);
-                    }
-                }
-            }
-        }
-    };
-
     var MonkeyModule = function(name, method) {
         if(this.constructor != MonkeyModule) {
             return new MonkeyModule(name, method);
         }
-        //this.guid = guid++;
         this.name = name;
         $.extend(this, method);
         //this.on = MonkeyBean.get(moduleNamePrefix + name);  //是否启动
@@ -409,14 +351,11 @@ typeof Updater != 'undefined' && new Updater({
                 attrs[key] = value;
             }
             for(attr in attrs) {
-                //log(attr + '---------' + attrs[attr]);
-                this.attr[attr] = attrs[attr]
+                this.attr[attr] = attrs[attr];
             }
-            this.trigger('change');  //属性更改会触发change事件
         },
 
         load : function() {
-            //log(this.name + ' 准备加载！');
         },
         //检测是否适用于当前页面
         fit : function() {
@@ -433,17 +372,10 @@ typeof Updater != 'undefined' && new Updater({
         }
     };
 
-    $.extend(MonkeyBean, cusEvents);
-    $.extend(MonkeyModule.prototype, cusEvents);
-
-
 
     var userName = MonkeyBean.get(MonkeyBeanConst.USER_NAME),
-
         userLocation = MonkeyBean.get(MonkeyBeanConst.USER_LOCATION);
 
-    //log(userName);
-    //log(userLocation);
 
     //GM_deleteValue(cName);
     //log('username=' + userName);
@@ -460,7 +392,6 @@ typeof Updater != 'undefined' && new Updater({
                     var arr = resp.finalUrl.split('/');
                     userName = arr[arr.length - 2];
                     MonkeyBean.set(MonkeyBeanConst.USER_NAME, userName);
-                    //log('2222' + MonkeyBeanConst.USER_NAME + '=' + MonkeyBean.get(MonkeyBeanConst.USER_NAME, ''));
                 }
             })
         }
@@ -472,7 +403,7 @@ typeof Updater != 'undefined' && new Updater({
                 onload:function (resp) {
                     if (location.href.indexOf('www.douban.com/accounts/login') != -1) return;
                     //响应头部信息中，包含了最终的url，其中就有地址
-                    var arr = trim(resp.finalUrl).split('.');
+                    var arr = $.trim(resp.finalUrl).split('.');
                     userLocation = arr[0].slice(7);
                     MonkeyBean.set(MonkeyBeanConst.USER_LOCATION, userLocation);
                 }
@@ -600,7 +531,7 @@ typeof Updater != 'undefined' && new Updater({
         load : function() {
             var that = this;
             this.render();
-            MonkeyBean.bind('TipClose', function() {
+            body.bind('TipClose', function() {
                 that.hide();
             })
         },
@@ -1178,7 +1109,7 @@ typeof Updater != 'undefined' && new Updater({
                                     <a href="http://www.douban.com/accounts/" target="_blank">我的帐号<em>' + unreadDouMail + '</em></a>\
                                     <ul>\
                                         <li><a href="http://www.douban.com/doumail/">豆邮<em>' + unreadDouMail + '</em></a></li>\
-                                        <!--li><a href="javascript:void(0);" monkey-action="MonkeyConfig.config" title="MonkeyBean插件设置">MonkeyBean</a></li-->\
+                                        <li><a href="javascript:void(0);" monkey-action="MonkeyConfig.config" title="MonkeyBean插件设置">MonkeyBean</a></li>\
                                         <li><a href="http://www.douban.com/accounts/logout?ck=' + MonkeyBean.getCk() + '">退出</a></li>\
                                     </ul>\
                                 </li>\
@@ -1551,7 +1482,7 @@ typeof Updater != 'undefined' && new Updater({
         load : function() {
             //这里注册的事件同样适用于楼主工具条。
             var that = this;
-            MonkeyBean.bind('MonkeyComment', function(actionName, context) {
+            body.bind('MonkeyComment', function(e, actionName, context) {
                 monkeyCommentToolbox[actionName] && monkeyCommentToolbox[actionName](context.parentNode.getAttribute('monkey-data'), context);
             });
 
@@ -1559,7 +1490,7 @@ typeof Updater != 'undefined' && new Updater({
             this.render();
 
             MonkeyBean.TM.get('MonkeyPosterToolbar').load(this.get('index'));
-            MonkeyBean.bind('loadPage', function() {
+            body.bind('loadPage', function() {
                 that.prepare();
                 that.render();
             });
@@ -1612,14 +1543,28 @@ typeof Updater != 'undefined' && new Updater({
      * updateTime : 2012-3-13
      */
     MonkeyModule('MonkeyPic', {
+        html : '<a href="javascript:void 0;" monkey-action="monkeyPic" style="float:left"></a>',
+
+        on : false,
+
         fit : function() {
             //翻页类型是photo就认为是相册页面
             return MonkeyBean.page.turnType == 'photo';
         },
 
         load : function() {
+
+            var title = $('.photitle');
             //大图http://img3.douban.com/view/photo/photo/public/p1450859575.jpg
             //小图http://img3.douban.com/view/photo/thumb/public/p1450859575.jpg
+        },
+
+        render : function() {
+
+        },
+
+        turnOnOrOff : function() {
+            this.on = !this.on;
         }
     });
 
@@ -1682,13 +1627,26 @@ typeof Updater != 'undefined' && new Updater({
                         <span class="Monkey-Button" monkey-action="saveConfig" style="float:right;">确定</span>\
                     </div>\
                     <ul class="Monkey-Config-Nav">\
+                        <li class="monkeyConfigHover" monkey-action="changeConfigPanel" monkey-data="filter">关键词过滤</li>\
                         <li monkey-action="changeConfigPanel" monkey-data="other">其他配置</li>\
+                        <li monkey-action="changeConfigPanel" monkey-data="export">导出配置</li>\
                         <li monkey-action="changeConfigPanel" monkey-data="about">关于脚本</li>\
                     </ul>\
                     <div class="Monkey-Config-Content">\
-                        <div monkey-data="other" style="display:block;">\
+                        <div monkey-data="filter" style="display:block;">\
+                            <input id="toggleGroupDescription" type="checkbox" /><label for="toggleGroupDescription">自动隐藏小组介绍</label>\
                             <input id="toggleGroupDescription" type="checkbox" /><label for="toggleGroupDescription">自动隐藏小组介绍</label>\
                             <input id="showFloor" type="checkbox" /><label for="showFloor">显示楼层数</label>\
+                        </div>\
+                        <div monkey-data="other">\
+                            <input id="toggleGroupDescription" type="checkbox" /><label for="toggleGroupDescription">自动隐藏小组介绍</label>\
+                            <input id="toggleGroupDescription" type="checkbox" /><label for="toggleGroupDescription">自动隐藏小组介绍</label>\
+                        </div>\
+                        <div monkey-data="export">\
+                            <span class="Monkey-Button" monkey-action="import" style="float:right;">导入</span>\
+                            <span class="Monkey-Button" monkey-action="export" style="float:right;">导出</span>\
+                            <textarea class="Monkey-Config-Data">\
+                            </textarea>\
                         </div>\
                         <div monkey-data="about" style="overflow:auto;height:200px;">\
                             <p>该脚本旨在为豆瓣增加各种各样的功能，Make your douban different!</p>\
@@ -1740,6 +1698,10 @@ typeof Updater != 'undefined' && new Updater({
                     background-color : #0C7823;\
                     color : #fff;\
                 }\
+                li.monkeyConfigHover {\
+                    background-color : #0C7823;\
+                    color : #fff;\
+                }\
                 .Monkey-Config-Content {\
                     border : 1px solid #e4e4e4;\
                     background-color : #fff;\
@@ -1756,28 +1718,31 @@ typeof Updater != 'undefined' && new Updater({
                 #Monkey-Config label:hover {\
                     background-color : #0C7823;\
                     color : #fff;\
+                }\
+                .Monkey-Config-Data {\
+                    height: 100px;\
+                    width: 200px;\
                 }',
 
         load : function() {
             var that = this;
-            MonkeyBean.bind('MonkeyConfig.config', function() {
+            body.bind('MonkeyConfig.config', function() {
                 if(!that.isInit) {
                     that.render();
-                    that.oldContent = that.content.find(':first-child');
-                    that.el.find('.Monkey-Config-Nav li').bind('mouseover', function() {
-                        var elem = $(this);
-                        if(elem.attr('monkey-action') == 'changeConfigPanel') {
-                            that.oldContent && that.oldContent.hide();
-                            that.oldContent = that.content.find('[monkey-data=' + elem.attr('monkey-data') + ']');
-                            that.oldContent.show();
-                        }
+                    that.items = $('.Monkey-Config-Nav li');
+                    that.contents = $('.Monkey-Config-Content [monkey-data]');
+                    that.items.each(function(i) {
+                       that.items[i].content = that.contents.eq(i);
                     });
+                    that.oldItem = $(that.items.eq(0));
+                    body.bind('changeConfigPanel', $.proxy(that.changeConfigPanel, that));
                 }
+                that.el.show();
             });
-            MonkeyBean.bind('closeConfig', function() {
+            body.bind('closeConfig', function() {
                 that.el.hide();
             });
-            MonkeyBean.bind('saveConfig', function() {
+            body.bind('saveConfig', function() {
                 that.el.hide();
             });
         },
@@ -1788,6 +1753,18 @@ typeof Updater != 'undefined' && new Updater({
             GM_addStyle(this.css);
             $(document.body).append(this.el);
             this.isInit = true;
+        },
+
+        changeConfigPanel : function(e, name, context) {
+            var oldItem = this.oldItem;
+            var target = $(context);
+            if(target[0] != oldItem[0]) {
+                oldItem.removeClass('monkeyConfigHover');
+                oldItem[0].content.hide();
+                target.addClass('monkeyConfigHover');
+                target[0].content.show();
+                this.oldItem = target;
+            }
         }
     });
 
@@ -1830,7 +1807,7 @@ typeof Updater != 'undefined' && new Updater({
 
         load : function() {
             this.render();
-            MonkeyBean.bind('MonkeyPageLoader', this.loadPage.bind(this));
+            body.bind('MonkeyPageLoader', $.proxy(this.loadPage, this));
             this.currentNum = +this.current.text();  //当前页码
             this.isWorked = false;  //该功能是否运行过
             //最大的页码
@@ -1958,7 +1935,7 @@ typeof Updater != 'undefined' && new Updater({
             //最后一页或没有翻页策略时返回
             if(this.isLastPage() || typeof politic === 'undefined' || this.isLoading) return false;
 
-            MonkeyBean.trigger('loadingStart');  //显示loading效果
+            $.trigger('loadingStart');  //显示loading效果
             this.isLoading = true;
 
             $.ajax({
@@ -1983,7 +1960,7 @@ typeof Updater != 'undefined' && new Updater({
 
                     that.isLastPage() && that.btn.text('已经是最后一页啦！');
 
-                    MonkeyBean.trigger('loadPage').//触发loadPage事件
+                    $.trigger('loadPage').//触发loadPage事件
                                trigger('loadingStop');  //停止loading效果
 
                     that.isWorked = true;  //已经运行过翻页
@@ -1997,7 +1974,7 @@ typeof Updater != 'undefined' && new Updater({
                         'left' : pos.left + 200,
                         'top' : pos.top - 120
                     });
-                    MonkeyBean.trigger('loadingStop');  //停止loading效果
+                    $.trigger('loadingStop');  //停止loading效果
                     that.isLoading = false;
                 }
             });
@@ -2210,7 +2187,7 @@ typeof Updater != 'undefined' && new Updater({
         },
 
         html : {
-            'toggle' : '<span class="Monkey-Button" monkey-action="MonkeyGroup.toggleGroupDescription" style="float:right;">\
+            'toggle' : '<span class="Monkey-Button" monkey-action="toggleGroupDescription" style="float:right;">\
                             显示小组介绍\
                          </span>',
 
@@ -2265,16 +2242,16 @@ typeof Updater != 'undefined' && new Updater({
             this.render(type);
 
             //初始化事件
-            MonkeyBean.bind('MonkeyGroup.toggleGroupDescription', this.toggleGroupDescription, this);
+            body.bind('toggleGroupDescription', $.proxy(this.toggleGroupDescription, this));
 
 
-            this.el.delegate('span[monkey-action]', 'click', function() {
-                that[this.getAttribute('monkey-action')]();
-            })
-            //开始拖拽
+            /*this.el.delegate('span[monkey-action]', 'click', function() {
+                            that[this.getAttribute('monkey-action')]();
+                        })*/
+           /* //开始拖拽
             this.bind('begin', this.begin, this);
             //结束拖拽
-            this.bind('end', this.end, this);
+            this.bind('end', this.end, this);*/
         },
 
         render : function(type) {
@@ -2341,7 +2318,7 @@ typeof Updater != 'undefined' && new Updater({
          * 增加小组分类
          */
         add : function() {
-            !this.isBegin && this.trigger('begin');
+            !this.isBegin && $.trigger('begin');
             var group = this.group.cloneNode(true);
             this.groupArea.append(group);
             return true;
@@ -2351,7 +2328,7 @@ typeof Updater != 'undefined' && new Updater({
          * 修改小组分类
          */
         modify : function() {
-            !this.isBegin && this.trigger('begin');
+            !this.isBegin && $.trigger('begin');
             return true;
         },
         /**
@@ -2359,7 +2336,7 @@ typeof Updater != 'undefined' && new Updater({
          */
         cancel : function() {
             if(confirm('你确定放弃本次操作吗？')) {
-                this.trigger('end', false);
+                $.trigger('end', false);
             }
             return true;
         },
@@ -2368,7 +2345,7 @@ typeof Updater != 'undefined' && new Updater({
          * 保存小组分类
          */
         save : function() {
-            this.trigger('end', false);
+            $.trigger('end', false);
             return true;
         },
         /**
@@ -2552,7 +2529,6 @@ typeof Updater != 'undefined' && new Updater({
                             if( result.sp.m > 0 ) {
                                 var result = that.generate(result);
                                 $(html_title + html_body_start + result + html_body_end + html_body_endmore + html_body_endend ).insertAfter($('#MonkeySearch'));
-                                //$( '.aside' ).prepend( html_title + html_body_start + result + html_body_end + html_body_endmore + html_body_endend );
                                 that.bindListener();
                                 that.content = $('#db-doulist-section ul')[0];
                                 that.contentP = that.content.parentNode;
@@ -2561,6 +2537,9 @@ typeof Updater != 'undefined' && new Updater({
                                 $(html_title + html_body_start + html_body_no + html_body_end + html_body_endend).insertAfter($('#MonkeySearch'));
                                 //$( '.aside' ).prepend( html_title + html_body_start + html_body_no + html_body_end + html_body_endend );
                             }
+                        },
+                        failure : function() {
+                            console.log('fail');
                         }
                     });
                 },
@@ -2575,7 +2554,8 @@ typeof Updater != 'undefined' && new Updater({
                 bindListener : function() {
                     var that = this;
                     //绑定事件
-                    $('.douban_iask_format').delegate('li', 'click', function(e) {
+
+                    $('.douban_iask_format li').bind('click', function(e) {
                         var tar = e.target;
                         that.format = tar.innerHTML == '全部' ? '' : tar.innerHTML;
                         if(that.checked != tar) {
@@ -2621,8 +2601,9 @@ typeof Updater != 'undefined' && new Updater({
                         dataType : 'script',
                         url : url,
                         success : function() {
-                            if( iaskSearchResult.sp.m > 0 ) {
-                                var result = that.generate(iaskSearchResult);
+                            var searchResult = unsafeWindow.iaskSearchResult;
+                            if( searchResult.sp.m > 0 ) {
+                                var result = that.generate(searchResult);
                                 that.contentP.style.display = 'block';
                                 that.content.innerHTML = '';
                                 that.content.innerHTML = result;
@@ -2672,10 +2653,11 @@ typeof Updater != 'undefined' && new Updater({
             var that = this;
             this.render();
 
-            MonkeyBean.bind('GoUp', function() {
+            body.bind('GoUp', function() {
+                log('UP');
                 unsafeWindow.scrollTo(0, 0);
             })
-            MonkeyBean.bind('GoDown', function() {
+            body.bind('GoDown', function() {
                 unsafeWindow.scrollTo(0, document.documentElement.scrollHeight);
             })
         },
@@ -2756,4 +2738,4 @@ typeof Updater != 'undefined' && new Updater({
     MonkeyBean.init();
 
     //log(((new Date()) - startTime)/1000 + '秒');
-})(window, unsafeWindow.$)
+})(window)
