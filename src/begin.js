@@ -25,7 +25,8 @@ typeof Updater != 'undefined' && new Updater({
  * 命名规范：
  *      class：MonkeyBean-Overlay    MonkeyBean+连字符+模块名(首字母大写)
  *      id：MonkeyBeanOverlay
- *      monkey-action：MonkeyBean
+ *      monkey-action：MonkeyBean.Overlay  用点号连接。(喜欢这么写，没别的理由)
+ *      monkey-data: {a:1,b:2}  采用JSON格式
  */
 (function(window, undefined) {
     if(window !== window.top) return false;  //防止在iframe中执行
@@ -36,8 +37,4 @@ typeof Updater != 'undefined' && new Updater({
     /*-------------------Begin--------------------*/
     var hasOwn = Object.prototype.hasOwnProperty,
         mine = /\/mine/,
-        people = /\/people\/(.*)\//,
-        //快捷键对应的code
-        keyCode = {
-            'enter' : 13
-        };
+        people = /\/people\/(.*)\//;

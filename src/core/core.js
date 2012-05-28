@@ -52,11 +52,11 @@ var MonkeyBean = {
 
             //loading动画
             body.bind('loadingStart', function() {
-                $('.Monkey-Loading-stop').removeClass('Monkey-Loading-stop').addClass('Monkey-Loading');
+                $('.MonkeyBean-Loading-stop').removeClass('MonkeyBean-Loading-stop').addClass('MonkeyBean-Loading');
             })
 
             body.bind('loadingStop', function() {
-                $('.Monkey-Loading').removeClass('Monkey-Loading').addClass('Monkey-Loading-stop');
+                $('.MonkeyBean-Loading').removeClass('MonkeyBean-Loading').addClass('MonkeyBean-Loading-stop');
             })
         },
 
@@ -82,7 +82,8 @@ var MonkeyBean = {
 
             get = function(moduleName) {
                 var module = moduleTree[moduleName];
-                !module.on && module.init();  //如果没有初始化完毕，则执行初始化
+                !module.on && module.load();  //如果没有初始化完毕，则执行初始化
+                module.on = true;
                 return module;
             };
 

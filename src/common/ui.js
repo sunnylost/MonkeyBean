@@ -1,7 +1,7 @@
 
 MonkeyBean.UI = {
     css : {
-        'button' : '.Monkey-Button {\
+        'button' : '.MonkeyBean-Button {\
                       color : #4F946E;\
                       background-color: #F2F8F2;\
                       border: 1px solid #E3F1ED;\
@@ -9,35 +9,35 @@ MonkeyBean.UI = {
                       border-radius : 3px 3px 3px;\
                       cursor : pointer;\
                   }\
-                  .Monkey-Button a {\
+                  .MonkeyBean-Button a {\
                       color : #4F946E;\
                       background-color: #F2F8F2;\
                   }\
-                  .Monkey-Button:hover, .Monkey-Button:hover a {\
+                  .MonkeyBean-Button:hover, .MonkeyBean-Button:hover a {\
                     background-color: #0C7823;\
                     border-color: #C4E2D8;\
                     color: #FFFFFF;\
                   }',
         //只是向下的箭头
-        'arrow' : ' .Monkey-Pointer {\
+        'arrow' : ' .MonkeyBean-Pointer {\
                         position : absolute;\
                         height : 0;\
                         left : 50px;\
                     }\
-                    .Monkey-Pointer-Border {\
+                    .MonkeyBean-Pointer-Border {\
                         border: 9px solid;\
                     }\
-                    .Monkey-a {\
+                    .MonkeyBean-a {\
                         border-color: #BBBBBB transparent transparent;\
                     }\
-                    .Monkey-b {\
+                    .MonkeyBean-b {\
                         border-color: #FFFFFF transparent transparent;\
                         top: -20px;\
                         position : relative;\
                     }',
 
         //loading样式来源于http://www.alessioatzeni.com/blog/css3-loading-animation-loop/
-        'loading' : '.Monkey-Loading {\
+        'loading' : '.MonkeyBean-Loading {\
                         background-color: rgba(0,0,0,0);\
                         border:5px solid rgba(255,255,255,0.9);\
                         opacity:.9;\
@@ -60,7 +60,7 @@ MonkeyBean.UI = {
                         0% { -webkit-transform:rotate(0deg); }\
                         100% { -webkit-transform:rotate(360deg); }\
                     }\
-                    .Monkey-Loading-stop {\
+                    .MonkeyBean-Loading-stop {\
                         display : none;\
                         -moz-animation-play-state : paused;\
                     }'
@@ -68,9 +68,9 @@ MonkeyBean.UI = {
     },
 
     html : {
-        'arrow' : '<div class="Monkey-Pointer">\
-                    <div class="Monkey-a Monkey-Pointer-Border"></div>\
-                    <div class="Monkey-b Monkey-Pointer-Border"></div>\
+        'arrow' : '<div class="MonkeyBean-Pointer">\
+                    <div class="MonkeyBean-a MonkeyBean-Pointer-Border"></div>\
+                    <div class="MonkeyBean-b MonkeyBean-Pointer-Border"></div>\
                 </div>'
     }
 };
@@ -86,7 +86,7 @@ $.each(MonkeyBean.UI.css, function(i, v) {
      * updateTime : 2012-3-13
      */
     MonkeyModule('tip', {
-        css : '#MonkeyUI-tip {\
+        css : '#MonkeyBean-tip {\
                     background-color: #F9EDBE;\
                     border: 1px solid #F0C36D;\
                     -webkit-border-radius: 2px;\
@@ -103,33 +103,33 @@ $.each(MonkeyBean.UI.css, function(i, v) {
                     border-image: initial;\
                     display:none;\
                 }\
-                #MonkeyUI-tip .Monkey-Pointer {\
+                #MonkeyBean-tip .MonkeyBean-Pointer {\
                     top : 95px;\
                 }\
-                #MonkeyUI-tip .Monkey-a {\
+                #MonkeyBean-tip .MonkeyBean-a {\
                     border-color : #F0C36D transparent transparent;\
                 }\
-                #MonkeyUI-tip .Monkey-b {\
+                #MonkeyBean-tip .MonkeyBean-b {\
                     border-color : #F9EDBE transparent transparent;\
                 }',
 
-        html : '<div id="MonkeyUI-tip">\
-                    <p name="MonkeyUI-tip-content"></p>\
-                    <a href="javascript:void(0)" style="position:relative;left:45%;" monkey-action="TipClose" >关闭</a>\
+        html : '<div id="MonkeyBean-tip">\
+                    <p name="MonkeyBean-tip-content"></p>\
+                    <a href="javascript:void(0)" style="position:relative;left:45%;" monkey-action="MonkeyBean.TipClose" >关闭</a>\
                     ' + MonkeyBean.UI.html.arrow +
                 '</div>',
 
         load : function() {
             var that = this;
             this.render();
-            body.bind('TipClose', function() {
+            body.bind('MonkeyBean.TipClose', function() {
                 that.hide();
             })
         },
 
         render : function() {
             this.el = $(this.html);
-            this.content = this.el.find('p[name=MonkeyUI-tip-content]');
+            this.content = this.el.find('p[name=MonkeyBean-tip-content]');
             document.body.appendChild(this.el[0]);
             GM_addStyle(this.css);
             GM_addStyle(MonkeyBean.UI.css.arrow);
@@ -161,7 +161,7 @@ $.each(MonkeyBean.UI.css, function(i, v) {
      * updateTime : 2012-2-19
      */
     MonkeyModule('reply', {
-        css : '#Monkey-ReplyForm{\
+        css : '#MonkeyBean-ReplyForm{\
                 -moz-border-bottom-colors: none;\
                 -moz-border-image: none;\
                 -moz-border-left-colors: none;\
@@ -182,7 +182,7 @@ $.each(MonkeyBean.UI.css, function(i, v) {
                 left : 60%;\
                 top : 20%;\
             }\
-            #Monkey-ReplyToolbox {\
+            #MonkeyBean-ReplyToolbox {\
                 position : absolute;\
                 margin-left : 15px;\
                 text-align : center;\
@@ -191,21 +191,21 @@ $.each(MonkeyBean.UI.css, function(i, v) {
                 bottom : 2px;\
                 height : 25px;\
             }\
-            #Monkey-ReplyText {\
+            #MonkeyBean-ReplyText {\
                 position : absolute;\
                 top : 2px;\
                 height : 85%;\
                 width : 99%;\
                 padding : 2px 3px 0 3px;\
             }\
-            #Monkey-ReplyText textarea {\
+            #MonkeyBean-ReplyText textarea {\
                 font-size: 12px;\
                 width : 96%;\
                 height : 100%;\
                 padding : 2px;\
                 margin : 3px;\
             }\
-            .Monkey-FormButton {\
+            .MonkeyBean-FormButton {\
                 background-color: #3FA156;\
                 border: 1px solid #528641;\
                 border-radius: 3px 3px 3px 3px;\
@@ -214,11 +214,11 @@ $.each(MonkeyBean.UI.css, function(i, v) {
                 height: 25px;\
                 padding: 5px 10px 6px;\
             }\
-            .Monkey-FormButton:hover {\
+            .MonkeyBean-FormButton:hover {\
                 background-color: #4FCA6C;\
                 border-color: #6AAD54;\
             }\
-            .Monkey-FormButton-flat {\
+            .MonkeyBean-FormButton-flat {\
                 border-color: #BBBBBB #BBBBBB #999999;\
                 border-radius: 3px 3px 3px 3px;\
                 border-style: solid;\
@@ -228,7 +228,7 @@ $.each(MonkeyBean.UI.css, function(i, v) {
                 overflow: hidden;\
                 vertical-align: middle;\
             }\
-            .Monkey-FormButton-flat input {\
+            .MonkeyBean-FormButton-flat input {\
                 background-image: -moz-linear-gradient(-90deg, #FCFCFC 0pt, #E9E9E9 100%);\
                 border: 0 none;\
                 border-radius: 2px 2px 2px 2px;\
@@ -239,27 +239,27 @@ $.each(MonkeyBean.UI.css, function(i, v) {
                 margin: 0 !important;\
                 padding: 0 14px;\
             }\
-            .Monkey-FormButton-flat:hover {\
+            .MonkeyBean-FormButton-flat:hover {\
                 border-color: #999999 #999999 #666666;\
                 color: #333333;\
             }',
 
-        html : '<div id="Monkey-ReplyForm">\
+        html : '<div id="MonkeyBean-ReplyForm">\
                     <form name="comment_form" method="post" action="add_comment">\
                         <div style="display: none;">\
                             <input name="ck" value="' + MonkeyBean.getCk() + '" type="hidden">\
                         </div>\
-                        <div id="Monkey-ReplyText">\
+                        <div id="MonkeyBean-ReplyText">\
                             <textarea id="re_text" name="rv_comment" rows="10" cols="40">\
                             </textarea>\
                         </div>\
-                        <div id="Monkey-ReplyToolbox">\
-                            <input value="加上去" type="submit" monkey-action="submit" class="Monkey-FormButton">\
-                            <span class="Monkey-FormButton-flat">\
-                                <input value="清空" type="button" monkey-action="reset" class="Monkey-FormButton-flat">\
+                        <div id="MonkeyBean-ReplyToolbox">\
+                            <input value="加上去" type="submit" monkey-action="MonkeyBean.submit" class="MonkeyBean-FormButton">\
+                            <span class="MonkeyBean-FormButton-flat">\
+                                <input value="清空" type="button" monkey-action="MonkeyBean.reset" class="MonkeyBean-FormButton-flat">\
                             </span>\
-                            <span class="Monkey-FormButton-flat">\
-                                <input value="取消" type="button" monkey-action="cancel" class="Monkey-FormButton-flat">\
+                            <span class="MonkeyBean-FormButton-flat">\
+                                <input value="取消" type="button" monkey-action="MonkeyBean.cancel" class="MonkeyBean-FormButton-flat">\
                             </span>\
                         </div>\
                     </form>\
@@ -311,7 +311,7 @@ $.each(MonkeyBean.UI.css, function(i, v) {
 
     //遮罩
     MonkeyModule('overlay', {
-        css : '#Monkey-Overlay {\
+        css : '#MonkeyBean-Overlay {\
                 background-color: #ccc;\
                 z-index: 10;\
                 opacity: 0.7;\
@@ -320,11 +320,11 @@ $.each(MonkeyBean.UI.css, function(i, v) {
                 top: 0;\
               }',
 
-        html : '<div id="Monkey-Overlay" monkey-action="overlay"></div>',
+        html : '<div id="MonkeyBean-Overlay" monkey-action="MonkeyBean.Overlay"></div>',
 
         load : function() {
             this.render();
-            body.bind('overlay', $.proxy(this.overlay, this));
+            body.bind('MonkeyBean.Overlay', $.proxy(this.overlay, this));
         },
 
         render : function() {
