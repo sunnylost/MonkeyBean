@@ -1,1 +1,3 @@
-    MonkeyBean.init();
+
+MonkeyBean.init();
+})(window)

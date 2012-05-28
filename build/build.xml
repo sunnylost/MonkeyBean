@@ -1,0 +1,32 @@
+<project name="buildMonkeyBean" default="compress" basedir="../">
+    <description>Build MonkeyBean by Ant</description>
+    <property name="src" location="src" />
+    <property name="build" location="build" />
+    <property name="core" location="src/core" />
+    <property name="common" location="src/common"/>
+    <property name="module" location="src/module"/>
+    <property name="lib" location="lib"/>
+    <property name="charset" value="utf-8"/>
+
+    <target name="init">
+        <mkdir dir="${build}"/>
+    </target>
+
+    <target name="concat" depends="init">
+        <concat destfile="${build}/MonkeyBean.js" encoding="${charset}" outputencoding="${charset}">
+            <fileset dir="${src}" includes="begin.js"/>
+            <fileset dir="${common}" includes="const.js"/>
+            <fileset dir="${core}" includes="core.js, module.js" />
+            <fileset dir="${common}" includes="*.js" excludes="const.js"/>
+            <fileset dir="${module}" includes="*.js"/>
+            <fileset dir="${src}" includes="run.js"/>
+        </concat>
+    </target>
+
+    <target name="compress" depends="concat">
+        <java jar="${lib}/compiler.jar" fork="true">
+            <arg line="--js=${build}/MonkeyBean.js --js_output_file=compiledMonkeyBean.js"/>
+        </java>
+    </target>
+
+</project>

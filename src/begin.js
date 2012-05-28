@@ -41,6 +41,3 @@ typeof Updater != 'undefined' && new Updater({
         keyCode = {
             'enter' : 13
         };
-
-    MonkeyBean.init();
-})(window)
