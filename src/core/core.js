@@ -81,7 +81,9 @@ var MonkeyBean = {
                 register;
 
             get = function(moduleName) {
-                return moduleTree[moduleName];
+                var module = moduleTree[moduleName];
+                !module.on && module.init();  //如果没有初始化完毕，则执行初始化
+                return module;
             };
 
             register = function(moduleName, module) {

@@ -75,6 +75,10 @@ MonkeyBean.UI = {
     }
 };
 
+$.each(MonkeyBean.UI.css, function(i, v) {
+    GM_addStyle(v);
+})
+
 /*********************************UI begin**************************************************************/
     /**
      * 提示便签
@@ -304,3 +308,50 @@ MonkeyBean.UI = {
             focusToTheEnd(this.text[0]);
         }
     });
+
+    //遮罩
+    MonkeyModule('overlay', {
+        css : '#Monkey-Overlay {\
+                background-color: #ccc;\
+                z-index: 10;\
+                opacity: 0.7;\
+                position: absolute;\
+                left: 0;\
+                top: 0;\
+              }',
+
+        html : '<div id="Monkey-Overlay" monkey-action="overlay"></div>',
+
+        load : function() {
+            this.render();
+            body.bind('overlay', $.proxy(this.overlay, this));
+        },
+
+        render : function() {
+            this.el = $(this.html);
+            body.append(this.el);
+            GM_addStyle(this.css);
+            this.isShown = true;
+        },
+
+        overlay : function() {
+            this.isShown ? this.hide() : this.show();
+        },
+
+        show : function() {
+            this.el.height(body.height()).width(body.width());
+            this.el.show();
+            this.isShown = true;
+        },
+
+        hide : function() {
+            this.el.hide();
+            this.isShown = false;
+        }
+
+    });
+
+
+    $.each(MonkeyBean.UI.css, function(i, v) {
+        GM_addStyle(v);
+    })

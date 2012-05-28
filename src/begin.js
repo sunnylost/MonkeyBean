@@ -21,6 +21,11 @@ typeof Updater != 'undefined' && new Updater({
  *      monkey-action：用于触发事件
  *      monkey-data：用于保存信息
  *      monkey-sign：标记的元素
+ *
+ * 命名规范：
+ *      class：MonkeyBean-Overlay    MonkeyBean+连字符+模块名(首字母大写)
+ *      id：MonkeyBeanOverlay
+ *      monkey-action：MonkeyBean
  */
 (function(window, undefined) {
     if(window !== window.top) return false;  //防止在iframe中执行
@@ -29,8 +34,6 @@ typeof Updater != 'undefined' && new Updater({
     var body = $(document.body);
 
     /*-------------------Begin--------------------*/
-
-
     var hasOwn = Object.prototype.hasOwnProperty,
         mine = /\/mine/,
         people = /\/people\/(.*)\//,
@@ -39,4 +42,5 @@ typeof Updater != 'undefined' && new Updater({
             'enter' : 13
         };
 
+    MonkeyBean.init();
 })(window)
