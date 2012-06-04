@@ -37,6 +37,19 @@ var MonkeyBean = {
         del : function(key) {
             GM_deletetValue(key);
         },
+
+        tempIframe : function() {
+            var iframe = $('<iframe style="width:0;height:0;display:none;"></iframe>');
+            body.append(iframe);
+            return iframe;
+        }(),
+        //清除script与link标签
+        filterJS : function(source) {
+            source = $.trim(source).replace(/<script[^>]*>[\s\S]*?<\/script\s*>/img, '')
+                                    .replace(/<link[^>]*>/mg, '');
+            return source;
+        },
+
         //MonkeyBean初始化方法
         init : function() {
             var that = this;
