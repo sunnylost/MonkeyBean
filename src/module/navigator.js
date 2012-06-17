@@ -218,11 +218,12 @@ MonkeyModule('MonkeyNavigator', {
                             <li name="Monkey-Nav-www">\
                                 <a href="http://www.douban.com/">豆瓣社区</a>\
                                 <ul>\
-                                    <li><a href="http://www.douban.com/">豆瓣猜</a></li>\
+                                    <li><a href="http://www.douban.com/">首页</a></li>\
                                     <li><a href="http://www.douban.com/update/">友邻广播</a></li>\
                                     <li><a href="http://www.douban.com/mine/">我的豆瓣</a></li>\
-                                    <li><a href="http://www.douban.com/group/">我的小组</a></li>\
-                                    <li><a href="http://www.douban.com/site/">我的小站</a></li>\
+                                    <li><a href="http://www.douban.com/group/">小组</a></li>\
+                                    <li><a href="http://www.douban.com/site/">小站</a></li>\
+                                    <li><a href="http://www.douban.com/tribe/">部落</a><img src="http://img3.douban.com/pics/new_menu.gif" style="top:4px;position:absolute;"></li>\
                                 </ul>\
                             </li>\
                             <li name="Monkey-Nav-book">\

@@ -31,7 +31,7 @@ typeof Updater != 'undefined' && new Updater({
 (function(window, undefined) {
     if(window !== window.top) return false;  //防止在iframe中执行
 
-    var $ = $ || unsafeWindow.$;  //默认使用1.7.2版本的jQuery，如果不存在则使用豆瓣提供的，目前版本1.4.4
+    var $ = $ || window.$ || unsafeWindow.$;  //默认使用1.7.2版本的jQuery，如果不存在则使用豆瓣提供的，目前版本1.4.4
     var body = $(document.body);
 
     /*-------------------Begin--------------------*/
